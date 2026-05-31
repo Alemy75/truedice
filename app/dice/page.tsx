@@ -263,7 +263,19 @@ export default function DicePage() {
             className={`canvas-card ${canvasToneClass}`}
           >
             <div className="canvas-vignette" />
+            {/* Animation layer (bottom). Always running; lifecycle keyed to phase. */}
             <BetSpinner phase={phase} />
+            {/* Static palm/dice frame ABOVE the spinner so it remains the
+                visual signature of the page (animation peeks through subtly
+                between the leaves). */}
+            <div className="dice-frame" />
+            {/* Darkening veil over animation + palm. Visible when text is
+                shown (idle / settled). Smooth fade so the transition into
+                "ROLLING" feels like the veil lifts. */}
+            <div
+              className="canvas-veil"
+              data-show={isIdle || settled ? "true" : "false"}
+            />
 
             {isIdle && (
               <div className="dice-idle">
@@ -275,11 +287,7 @@ export default function DicePage() {
             )}
 
             <div className={diceNumberClass}>
-              {isIdle
-                ? ""
-                : settled && result !== null
-                  ? String(result).padStart(4, "0")
-                  : "????"}
+              {settled && result !== null ? String(result).padStart(4, "0") : ""}
             </div>
 
             <div

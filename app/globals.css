@@ -589,31 +589,52 @@ img, svg { display: block; }
   background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(212,175,55,0.05), transparent 72%);
 }
 .canvas-card.grain::before { z-index: 0; }
-/* Animated pixel-art spinner — replaces static dice-frame.png; lifecycle
-   driven by DicePhase in <BetSpinner>. Sized to fill the canvas-card. */
+/* Layer stack inside .canvas-card:
+   z=0  .canvas-vignette       (gold-tinted radial)
+   z=1  .bet-spinner-canvas    (animated pixel dice + coins + palm leaves)
+   z=2  .dice-frame            (static palm/dice PNG — bound to the brand)
+   z=3  .canvas-veil           (smooth darken when text is showing)
+   z=4  .dice-idle, .dice-number, .dice-readout, .phase-pill (text/UI)
+*/
+
+/* Animated spinner — bottom layer, peeks through the palm.
+   - inset 22% → fits in the central gap between the palm fronds (~56%)
+   - rotate(180deg) → palm leaves of the pixel art go on top to match
+     the live palm tree above it. */
 .bet-spinner-canvas {
   position: absolute;
-  inset: 8%;                /* leave breathing room so the number stays readable */
-  width: 84%;
-  height: 84%;
+  inset: 22%;
+  width: 56%;
+  height: 56%;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.85;            /* subtle when number is foregrounded */
+  transform: rotate(180deg);
 }
-/* Static fallback (kept for any non-JS / hydration moment) */
+/* Static palm/dice PNG — kept as the visual signature; overlays the
+   spinner so the animation is felt rather than seen directly */
 .dice-frame {
-  position: absolute; inset: -2px; z-index: 1; pointer-events: none;
+  position: absolute; inset: -2px; z-index: 2; pointer-events: none;
   background-image: url("/assets/dice-frame.png");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
 }
-.dice-number, .dice-readout { position: relative; z-index: 2; }
+/* Darkening veil — fades in over animation + palm whenever text content
+   (idle prompt / settled result) is shown. data-show="true" → opaque. */
+.canvas-veil {
+  position: absolute; inset: -2px; z-index: 3; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(5,4,3,0.75) 0%, rgba(5,4,3,0.55) 55%, rgba(5,4,3,0.25) 100%);
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+.canvas-veil[data-show="true"] { opacity: 1; }
+.dice-number, .dice-readout { position: relative; z-index: 4; }
 .dice-readout { display: none; }
 .dice-readout.show { display: flex; }
 /* Idle prompt (shown only when awaiting a bet) */
 .dice-idle {
-  position: absolute; inset: 0; z-index: 2;
+  position: absolute; inset: 0; z-index: 4;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 12px; text-align: center; pointer-events: none;
   padding: 0 24%;
