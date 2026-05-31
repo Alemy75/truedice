@@ -551,8 +551,9 @@ img, svg { display: block; }
 }
 
 /* Mobile artwork swap — bgs change to the mobile crop + dim palms to
-   opacity 0.2 so the hero text reads clearly against them. Fade starts
-   higher up the diagonal so the bg covers more of each palm tile. */
+   opacity 0.2 so the hero text reads clearly against them. The per-side
+   diagonal fade is disabled here — the global .hero::after bottom fade
+   handles the seam-to-bg gracefully on its own. */
 @media (max-width: 700px) {
   .hero-palm {
     background-image: url("/assets/hero-mobile.webp");
@@ -564,13 +565,7 @@ img, svg { display: block; }
   }
   .hero-palm-left::after,
   .hero-palm-right::after {
-    background: linear-gradient(
-      var(--hero-fade-angle, 135deg),
-      transparent 0%,
-      transparent 8%,
-      rgba(5, 4, 3, 0.75) 38%,
-      var(--color-background) 70%
-    );
+    background: none;
   }
 }
 .hero-inner { position: relative; z-index: 2; width: 100%; display: flex; justify-content: center; }
@@ -1114,15 +1109,25 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
 .vrf-stall code { font-family: var(--font-mono); color: var(--color-foreground); }
 
 /* Stack on narrow desktop / tablet — bumped 1024 → 1100 because at
-   ~1030-1080 the canvas-card was visually crowding the form column
-   (palms + frame don't shrink below their image breathing room). */
+   ~1030-1080 the canvas-card was visually crowding the form column.
+   Keep canvas-card SQUARE in this stacked range (was 16/11) so the
+   dice-frame.png square artwork slices cleanly into both .dice-palm
+   sides — at 16/11 the image stretched too thin horizontally and the
+   inside edge of each palm went outside the container, leaving a
+   visible empty strip between palms ~700-1000 px wide. Square aspect
+   + max-width keeps the layout reasonable. */
 @media (max-width: 1100px) {
   .play-grid { grid-template-columns: 1fr; }
-  .canvas-card { aspect-ratio: 16/11; }
+  .canvas-card {
+    aspect-ratio: 1;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
   .result-track { width: 44%; max-width: 320px; bottom: 24px; }
 }
 @media (max-width: 600px) {
-  .canvas-card { aspect-ratio: 4/3; }
+  .canvas-card { aspect-ratio: 4/3; max-width: none; }
   .result-track { width: 48%; max-width: none; bottom: 20px; }
   .track-labels { font-size: 10px; }
   .dice-idle { padding: 0 26%; }
