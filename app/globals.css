@@ -604,6 +604,15 @@ img, svg { display: block; }
 .section-head h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(32px,5vw,40px); letter-spacing: -0.02em; }
 
 .lobby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+
+/* High Rollers leaderboard — same shell as .stats (surface card with
+   subtle border + radius). The table inside uses .dtable. */
+.high-rollers-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
 .tile {
   aspect-ratio: 1; background: var(--color-surface); border-radius: var(--radius-lg);
   position: relative; padding: 16px; display: flex; flex-direction: column;
