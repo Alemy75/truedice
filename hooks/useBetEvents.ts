@@ -19,6 +19,14 @@ export interface BetEvent {
 
 const MAX_FEED = 50;
 
+// Contract was deployed at Sepolia block ~10960462 (May 31, 2026).
+// Using "earliest" with Alchemy/Infura hits a 10000-block range limit
+// and silently fails — pin to a known-good lower bound instead.
+const DEPLOY_BLOCK_FALLBACK = 10960000n;
+const DEPLOY_BLOCK = process.env.NEXT_PUBLIC_DEPLOY_BLOCK
+  ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK)
+  : DEPLOY_BLOCK_FALLBACK;
+
 export function useBetEvents() {
   const contract = useCasinoContract();
   const publicClient = usePublicClient();
@@ -33,13 +41,13 @@ export function useBetEvents() {
         const placedLogs = await publicClient.getContractEvents({
           ...contract,
           eventName: "BetPlaced",
-          fromBlock: "earliest",
+          fromBlock: DEPLOY_BLOCK,
           toBlock: "latest",
         });
         const settledLogs = await publicClient.getContractEvents({
           ...contract,
           eventName: "BetSettled",
-          fromBlock: "earliest",
+          fromBlock: DEPLOY_BLOCK,
           toBlock: "latest",
         });
 

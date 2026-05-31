@@ -3,6 +3,11 @@ import { useAccount, usePublicClient, useWatchContractEvent } from "wagmi";
 import { useCasinoContract } from "./useCasinoContract";
 import { type BetEvent } from "./useBetEvents";
 
+const DEPLOY_BLOCK_FALLBACK = 10960000n;
+const DEPLOY_BLOCK = process.env.NEXT_PUBLIC_DEPLOY_BLOCK
+  ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK)
+  : DEPLOY_BLOCK_FALLBACK;
+
 export function useMyBets() {
   const { address } = useAccount();
   const contract = useCasinoContract();
@@ -21,14 +26,14 @@ export function useMyBets() {
           ...contract,
           eventName: "BetPlaced",
           args: { player: address },
-          fromBlock: "earliest",
+          fromBlock: DEPLOY_BLOCK,
           toBlock: "latest",
         });
         const settled = await publicClient.getContractEvents({
           ...contract,
           eventName: "BetSettled",
           args: { player: address },
-          fromBlock: "earliest",
+          fromBlock: DEPLOY_BLOCK,
           toBlock: "latest",
         });
         const settledByReq = new Map(

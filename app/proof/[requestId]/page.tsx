@@ -16,6 +16,11 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
+const DEPLOY_BLOCK_FALLBACK = 10960000n;
+const DEPLOY_BLOCK = process.env.NEXT_PUBLIC_DEPLOY_BLOCK
+  ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK)
+  : DEPLOY_BLOCK_FALLBACK;
+
 interface ProofData {
   player: `0x${string}`;
   stake: bigint;
@@ -57,7 +62,7 @@ export default function ProofPage({
           ...contract,
           eventName: "BetPlaced",
           args: { requestId: reqId },
-          fromBlock: "earliest",
+          fromBlock: DEPLOY_BLOCK,
           toBlock: "latest",
         });
         if (cancelled) return;
@@ -70,7 +75,7 @@ export default function ProofPage({
           ...contract,
           eventName: "BetSettled",
           args: { requestId: reqId },
-          fromBlock: "earliest",
+          fromBlock: DEPLOY_BLOCK,
           toBlock: "latest",
         });
         if (cancelled) return;
