@@ -655,7 +655,10 @@ img, svg { display: block; }
    z=4  .dice-idle, .dice-number, .dice-readout, .phase-pill, .result-track
 */
 
-/* Animated spinner — under the palm, inside the central gap. */
+/* Animated spinner — under the palm, inside the central gap.
+   Default state: dim + blurred ("breathing in background"). When the
+   bet lifecycle enters confirm / broadcasting / awaiting-vrf, data-active
+   flips to "true" → full clarity + sharp. Smooth fade both ways. */
 .bet-spinner-canvas {
   position: absolute;
   inset: 22%;
@@ -663,6 +666,13 @@ img, svg { display: block; }
   height: 56%;
   z-index: 1;
   pointer-events: none;
+  opacity: 0.1;
+  filter: blur(10px);
+  transition: opacity 600ms ease-out, filter 600ms ease-out;
+}
+.bet-spinner-canvas[data-active="true"] {
+  opacity: 1;
+  filter: none;
 }
 .dice-frame {
   position: absolute; inset: -2px; z-index: 2; pointer-events: none;

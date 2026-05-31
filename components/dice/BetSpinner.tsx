@@ -69,6 +69,13 @@ export function BetSpinner({ phase }: { phase: DicePhase }) {
   const spinnerRef = useRef<SpinnerInstance | null>(null);
   const scriptReadyRef = useRef(false);
 
+  // Active = spinner should be fully visible (in-flight phases).
+  // Otherwise it dims to opacity:0.1 + blur(10px) — see globals.css.
+  const inflight =
+    phase.kind === "confirm" ||
+    phase.kind === "broadcasting" ||
+    phase.kind === "awaiting-vrf";
+
   // Try to init when (a) script is loaded and (b) canvas is in the DOM.
   function tryInit() {
     if (spinnerRef.current) return;
@@ -129,6 +136,7 @@ export function BetSpinner({ phase }: { phase: DicePhase }) {
       <canvas
         ref={canvasRef}
         className="bet-spinner-canvas"
+        data-active={inflight ? "true" : "false"}
         aria-hidden
       />
     </>
