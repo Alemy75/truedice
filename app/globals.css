@@ -649,17 +649,15 @@ img, svg { display: block; }
 }
 .canvas-card.grain::before { z-index: 0; }
 /* Layer stack inside .canvas-card:
-   z=0  .canvas-vignette       (gold-tinted radial)
-   z=1  .bet-spinner-canvas    (animated pixel dice + coins + palm leaves)
-   z=2  .dice-frame            (static palm/dice PNG — bound to the brand)
-   z=3  .canvas-veil           (smooth darken when text is showing)
-   z=4  .dice-idle, .dice-number, .dice-readout, .phase-pill (text/UI)
+   z=0  .canvas-vignette       gold-tinted radial
+   z=1  .bet-spinner-canvas    animated pixel dice (size-clipped to palm gap)
+   z=2  .canvas-veil           darken + blur layer that ONLY covers spinner
+   z=3  .dice-frame            static palm PNG (always at full clarity)
+   z=4  .dice-idle, .dice-number, .dice-readout, .phase-pill, .result-track
 */
 
 /* Animated spinner — bottom layer, peeks through the palm.
-   - inset 22% → fits in the central gap between the palm fronds (~56%)
-   - rotate(180deg) → palm leaves of the pixel art go on top to match
-     the live palm tree above it. */
+   inset 22% → fits in the central gap between the palm fronds (~56%) */
 .bet-spinner-canvas {
   position: absolute;
   inset: 22%;
@@ -667,27 +665,36 @@ img, svg { display: block; }
   height: 56%;
   z-index: 1;
   pointer-events: none;
-  transform: rotate(180deg);
 }
-/* Static palm/dice PNG — kept as the visual signature; overlays the
-   spinner so the animation is felt rather than seen directly */
+/* Veil sits BETWEEN spinner and palm — darkens ONLY the animation, not
+   the palm/result-track which keep their own opacity. The veil also
+   matches the spinner's footprint (inset 22%, 56×56%) so the palm
+   fronds are never touched.
+   data-show="true" (idle / settled) → strong darken + blur. */
+.canvas-veil {
+  position: absolute;
+  inset: 22%;
+  width: 56%;
+  height: 56%;
+  z-index: 2;
+  pointer-events: none;
+  background: rgba(5, 4, 3, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 18%;
+  opacity: 0;
+  transition: opacity 600ms ease-out, backdrop-filter 600ms ease-out;
+}
+.canvas-veil[data-show="true"] { opacity: 1; }
+/* Static palm/dice PNG — kept as the visual signature; above the veil
+   so it always reads at full clarity. */
 .dice-frame {
-  position: absolute; inset: -2px; z-index: 2; pointer-events: none;
+  position: absolute; inset: -2px; z-index: 3; pointer-events: none;
   background-image: url("/assets/dice-frame.png");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
 }
-/* Darkening veil — fades in over animation + palm whenever text content
-   (idle prompt / settled result) is shown. data-show="true" → opaque. */
-.canvas-veil {
-  position: absolute; inset: -2px; z-index: 3; pointer-events: none;
-  background:
-    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(5,4,3,0.75) 0%, rgba(5,4,3,0.55) 55%, rgba(5,4,3,0.25) 100%);
-  opacity: 0;
-  transition: opacity 600ms ease-out;
-}
-.canvas-veil[data-show="true"] { opacity: 1; }
 .dice-number, .dice-readout { position: relative; z-index: 4; }
 .dice-readout { display: none; }
 .dice-readout.show { display: flex; }
@@ -736,7 +743,7 @@ img, svg { display: block; }
 .dice-readout .r1 { font-family: var(--font-mono); font-size: clamp(16px,2.5vw,24px); color: var(--color-foreground); }
 .dice-readout .r2 { font-family: var(--font-mono); font-size: clamp(13px,2vw,18px); color: var(--color-foreground-muted); }
 .phase-pill {
-  position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2;
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 4;
   display: inline-flex; align-items: center; gap: 9px; height: 36px; padding: 0 18px;
   border-radius: 999px; background: var(--color-surface-elevated);
   box-shadow: inset 0 0 0 1px var(--color-border);
@@ -750,7 +757,7 @@ img, svg { display: block; }
 /* ---- Result track (0–9999 with gold threshold) ---- */
 .result-track {
   position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: 28px; z-index: 2;
+  bottom: 28px; z-index: 4;
   width: 44%; max-width: 360px;
   opacity: 0; transition: opacity 300ms ease-out;
 }
