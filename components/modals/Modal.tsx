@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   open: boolean;
@@ -13,11 +14,23 @@ interface ModalProps {
  * Shared modal shell using `.modal-backdrop` + `.modal` CSS classes
  * from app/globals.css (mirrors claude-design-layouts/dice.html behaviour).
  *
+ * Renders via React Portal to <body> so the modal escapes any ancestor
+ * containing block. The nav has `backdrop-filter: blur(5px)` which
+ * creates a containing block for fixed-positioned descendants — without
+ * the portal, `.modal-backdrop { position: fixed }` would be anchored
+ * to the nav instead of the viewport.
+ *
  * - Backdrop click → close
  * - ESC → close
  * - Body scroll locked while open
  */
 export function Modal({ open, onClose, ariaLabel, children }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -32,12 +45,19 @@ export function Modal({ open, onClose, ariaLabel, children }: ModalProps) {
     };
   }, [open, onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className={`modal-backdrop ${open ? "open" : ""}`}
-      onMouseDown={(e) => {
+      onClick={(e) => {
+        // Close only when the click ends on the backdrop itself, not on the
+        // modal box or any descendant. Using onClick (not onMouseDown) so a
+        // text-selection drag that starts in the input and ends outside the
+        // modal doesn't accidentally close it.
         if (e.target === e.currentTarget) onClose();
       }}
+      aria-hidden={!open}
     >
       <div
         className="modal"
@@ -55,6 +75,7 @@ export function Modal({ open, onClose, ariaLabel, children }: ModalProps) {
         </button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

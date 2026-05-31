@@ -1264,8 +1264,11 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
   background: rgba(5, 4, 3, 0.80);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+  /* Scroll the backdrop itself when modal content exceeds viewport,
+     instead of clipping the top with flex centering. */
+  overflow-y: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;     /* anchor from top so tall modals never clip */
   justify-content: center;
   padding: 24px;
   opacity: 0;
@@ -1281,6 +1284,9 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   padding: 32px;
+  /* Vertical auto margins center the modal when there is enough room,
+     but allow it to scroll naturally when it does not fit. */
+  margin: auto 0;
   transform: translateY(8px);
   transition: transform 200ms ease-out;
 }

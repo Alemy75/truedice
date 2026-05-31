@@ -136,6 +136,68 @@ I considered Solana Devnet seriously. For a real-money casino product, sub-secon
 
 For a mainnet ship I'd seriously look at Base L2 — same EVM tooling but with 2s blocks and ~$0.001 fees. Sepolia's 12s blocks are workable on testnet because the wait becomes a trust-signal UI element ("we wait because Chainlink VRF is real, and that's the point").
 
+## Economics & Gas: why this only works on L2 in production
+
+**Current state**: this demo runs on **Ethereum Sepolia testnet**, where gas is effectively **free** — users pay in worthless test ETH that anyone can grab from a faucet in 30 seconds. That's why the min bet here is `0.0001 ETH` ($0.30 at $3000/ETH-equivalent) — we're optimizing for "playable in a 5-minute demo," not "economically sensible at real prices."
+
+For a real-money production ship, **the choice of network completely determines whether the product is viable**. Below is the honest math.
+
+### The viability constraint
+
+The user pays gas **from their own wallet** for every `placeBet()` call (settlement is paid by the casino's Chainlink VRF subscription, so that one is invisible to the player). For the product to make sense, gas needs to be **a small fraction of the bet** — say, < 5%. Otherwise the user is paying more in fees than the casino's 1% edge takes from them, and they'd be playing at negative expected value vs. just holding ETH.
+
+`placeBet()` is a moderately heavy transaction: ~150,000 gas (storage writes for the `Roll` struct, VRF request, event emission).
+
+### Network-by-network cost of one `placeBet()`
+
+Assuming `$3000/ETH` and typical 2026 gas conditions:
+
+| Network | Gas price | Cost per `placeBet()` | Min sensible bet | Verdict |
+|---|---|---|---|---|
+| **Ethereum L1 mainnet** | ~30 gwei | **~$13.50** | $1,350 (so gas = 1%) | ❌ Dead on arrival |
+| **Sepolia (current)** | n/a — testnet | **$0.00** | $0.0001 ETH faucet | ✅ Demo only |
+| **Base L2** | ~0.005 gwei | **~$0.003** | $0.30 | ✅ **Best fit** |
+| **Arbitrum One** | ~0.01 gwei | **~$0.005** | $0.50 | ✅ Works |
+| **Optimism** | ~0.001 gwei | **~$0.003** | $0.30 | ✅ Works |
+| **Polygon PoS** | ~30 gwei (MATIC, $0.50) | **~$0.001** | $0.10 | ✅ Cheapest, but Polygon ≠ ETH UX |
+
+On **Ethereum L1 mainnet**, a casino at our parameters is economically impossible — a $0.30 bet would carry $13.50 in gas, a **45× fee on stake**. Even a $30 bet pays 45% in gas. **Nobody plays this.** This is precisely why every real crypto casino you'll see (Polymarket, Rollbit, Stake on-chain, Shuffle) runs on **L2 or a sidechain**, never directly on L1.
+
+### Recommended production target: **Base**
+
+If we were shipping this for real today, I'd pick **Base (Coinbase L2)**:
+
+1. **~$0.003 per bet** — gas is ~1% of a $0.30 minimum bet, well under the casino's 1% house edge — economics work.
+2. **2-second blocks** — the bet → reveal flow feels instant instead of a 12s Sepolia wait.
+3. **Chainlink VRF v2.5 is live on Base mainnet** with full LINK + native-ETH payment support — we don't have to rewrite the randomness layer.
+4. **Coinbase user funnel** — Coinbase Wallet is integrated end-to-end, and Base has the largest L2 active-user base. Easiest user onramp.
+5. **EVM-identical** — our `CasinoDice.sol` ports **1:1** with zero changes. Only the frontend config differs.
+
+### What changes when porting to Base
+
+Almost nothing on the contract side. The diff is essentially three constants:
+
+```diff
+// foundry.toml deploy script
+- vrfCoordinator = 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B  // Sepolia v2.5
++ vrfCoordinator = 0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634  // Base mainnet v2.5
+
+// lib/wagmi.ts
+- chain: sepolia
++ chain: base
+- rpcUrl: alchemy/sepolia
++ rpcUrl: alchemy/base-mainnet
+
+// New VRF subscription
++ Fund a Base mainnet VRF subscription with LINK (or use native ETH payment)
+```
+
+Plus a fresh deploy + verify on Base. **Total porting time: ~1 hour**, dominated by funding the new VRF subscription, not code.
+
+### Why this section exists
+
+Picking the wrong network kills the product silently — the contract works, the UI works, but **nobody can afford to play**. The "is this viable on mainnet?" question is the single most important thing to answer before shipping a casino, and the answer is "only on L2." Sepolia gives us the freedom to demo and iterate at zero cost; the path to production is a one-line config change to Base.
+
 ## Hardest unknown I figured out
 
 **Chainlink VRF v2.5 vs v2 on Sepolia.** Most public tutorials and examples are still on VRF v2, but v2.5 is the current production version with different coordinator addresses, different key hash, and a fundamentally different consumer-contract API (`VRFConsumerBaseV2Plus`, `RandomWordsRequest` struct with `extraArgs` for native vs LINK payment).
