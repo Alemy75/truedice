@@ -8,13 +8,15 @@
 <style>
   /* ---- Nav ---- */
   .nav {
-    position: sticky; top: 0; z-index: 50;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
     transition: background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out;
-    border-bottom: 1px solid transparent;
+    background: rgba(5,4,3,0.30);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border-subtle);
   }
   .nav.scrolled {
-    background: rgba(5,4,3,0.72);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: rgba(5,4,3,0.74);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--color-border-subtle);
   }
   .nav-inner { display: flex; align-items: center; height: 76px; gap: 32px; }
@@ -38,28 +40,29 @@
   /* ---- Hero ---- */
   .hero {
     position: relative;
-    min-height: calc(100vh - 76px);
+    min-height: 100vh;
     display: flex; align-items: center; justify-content: center;
     text-align: center;
     overflow: hidden;
+    padding-top: 76px;
   }
   /* banner image centered, full-bleed behind the content */
   .hero-banner {
     position: absolute; inset: 0; z-index: 0;
     pointer-events: none;
   }
+  .hero-banner picture { display: block; width: 100%; height: 100%; }
   .hero-banner img {
     width: 100%; height: 100%; object-fit: cover; object-position: center center;
   }
-  /* darken edges + center so centered text stays readable */
+  /* light darkening so the gold palms stay vivid; center kept clear for text */
   .hero-banner::after {
     content: ""; position: absolute; inset: 0;
     background:
-      radial-gradient(ellipse 78% 68% at 50% 50%, rgba(5,4,3,0.94) 0%, rgba(5,4,3,0.80) 45%, rgba(5,4,3,0.48) 80%),
-      linear-gradient(0deg, var(--color-background) 0%, transparent 32%),
-      linear-gradient(180deg, rgba(5,4,3,0.82) 0%, transparent 34%);
+      radial-gradient(ellipse 54% 50% at 50% 48%, rgba(5,4,3,0.66) 0%, rgba(5,4,3,0.30) 56%, transparent 80%),
+      linear-gradient(0deg, var(--color-background) 0%, transparent 24%),
+      linear-gradient(180deg, rgba(5,4,3,0.34) 0%, transparent 18%);
   }
-  .hero-banner img { opacity: 0.72; }
   .hero-inner { position: relative; z-index: 1; width: 100%; display: flex; justify-content: center; }
   .hero-text { max-width: 640px; margin: 0 auto; }
   .hero > * { flex-shrink: 0; }
@@ -159,13 +162,15 @@
     .footer-grid { grid-template-columns: 1fr; gap: 32px; }
   }
   @media (max-width: 980px) {
-    .hero { min-height: calc(100vh - 76px); padding: 64px 0; }
-    .hero-banner { width: 100%; max-width: none; opacity: 0.5; }
-    .hero-banner img { object-position: 70% center; }
+    .hero { min-height: 100vh; padding: 76px 0 56px; }
+  }
+  @media (max-width: 700px) {
+    .hero-banner img { object-position: center center; }
     .hero-banner::after {
       background:
-        linear-gradient(90deg, var(--color-background) 8%, rgba(5,4,3,0.55) 45%, rgba(5,4,3,0.30) 100%),
-        linear-gradient(0deg, var(--color-background) 4%, transparent 30%);
+        radial-gradient(ellipse 64% 46% at 50% 46%, rgba(5,4,3,0.62) 0%, rgba(5,4,3,0.30) 58%, transparent 82%),
+        linear-gradient(0deg, var(--color-background) 0%, transparent 20%),
+        linear-gradient(180deg, rgba(5,4,3,0.34) 0%, transparent 20%);
     }
   }
   @media (max-width: 640px) {
@@ -193,7 +198,12 @@
 
 <!-- HERO -->
 <header class="hero">
-  <div class="hero-banner"><img src="assets/banner.png" alt="True Dice"></div>
+  <div class="hero-banner">
+    <picture>
+      <source media="(max-width: 700px)" srcset="assets/hero-mobile.webp">
+      <img src="assets/hero-desktop.webp" alt="True Dice">
+    </picture>
+  </div>
   <div class="container hero-inner">
     <div class="hero-text">
       <div class="hero-eyebrow">ON-CHAIN · CHAINLINK VRF · ETHEREUM SEPOLIA</div>
