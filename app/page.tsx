@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useMemo } from "react";
+import { Nav } from "@/components/layout/Nav";
 import { useBetEvents } from "@/hooks/useBetEvents";
 import { formatEth, formatRelativeTime, truncateAddress } from "@/lib/format";
 
@@ -11,13 +11,6 @@ const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
 
 export default function LobbyPage() {
   const events = useBetEvents();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   // Aggregate stats from on-chain events
   const stats = useMemo(() => {
@@ -43,23 +36,7 @@ export default function LobbyPage() {
 
   return (
     <>
-      {/* NAV */}
-      <nav className={`nav ${scrolled ? "scrolled" : ""}`} data-nav>
-        <div className="container nav-inner">
-          <Link href="/" className="brand-logo" aria-label="True Dice">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/logo.png" alt="True Dice" />
-          </Link>
-          <div className="nav-links">
-            <Link href="/dice">Dice</Link>
-            <Link href="/dice#feed">Live</Link>
-            <Link href="/about">About</Link>
-          </div>
-          <div style={{ marginLeft: "auto" }}>
-            <ConnectButton showBalance={false} chainStatus="icon" accountStatus={{ smallScreen: "avatar", largeScreen: "address" }} />
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       {/* HERO */}
       <header className="hero">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TopBar } from "@/components/layout/TopBar";
+import { Nav } from "@/components/layout/Nav";
 import { EtherscanLink } from "@/components/ui/EtherscanLink";
 import { truncateAddress } from "@/lib/format";
 
@@ -8,8 +8,8 @@ const CONTRACT = process.env.NEXT_PUBLIC_CASINO_CONTRACT;
 export default function AboutPage() {
   return (
     <>
-      <TopBar />
-      <main className="max-w-[720px] mx-auto px-6 md:px-8 pt-16 md:pt-18 pb-24">
+      <Nav />
+      <main className="max-w-[720px] mx-auto px-6 md:px-8 pt-[120px] md:pt-[140px] pb-24">
         <div className="eyebrow mb-6">Provably Fair · Documentation</div>
         <h1 className="font-display font-semibold tracking-[-0.025em] leading-[1.1] text-[clamp(34px,6vw,44px)] text-foreground">
           How True Dice Works

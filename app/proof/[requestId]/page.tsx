@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePublicClient } from "wagmi";
-import { TopBar } from "@/components/layout/TopBar";
+import { Nav } from "@/components/layout/Nav";
 import { ProofStep, KV } from "@/components/proof/ProofStep";
 import { EtherscanLink } from "@/components/ui/EtherscanLink";
 import { AddressChip } from "@/components/ui/AddressChip";
@@ -100,8 +100,8 @@ export default function ProofPage({
 
   return (
     <>
-      <TopBar />
-      <main className="max-w-[800px] mx-auto px-6 md:px-8 pt-12 pb-24">
+      <Nav />
+      <main className="max-w-[800px] mx-auto px-6 md:px-8 pt-[120px] md:pt-[140px] pb-24">
         {notFound ? (
           <div className="text-center py-24">
             <h1 className="font-display text-4xl md:text-5xl text-foreground">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { TopBar } from "@/components/layout/TopBar";
+import { Nav } from "@/components/layout/Nav";
 import { BetForm } from "@/components/dice/BetForm";
 import { BetButton } from "@/components/dice/BetButton";
 import { DiceCanvas } from "@/components/dice/DiceCanvas";
@@ -60,8 +60,8 @@ export default function DicePage() {
 
   return (
     <>
-      <TopBar />
-      <main className="w-full max-w-[1280px] mx-auto px-5 sm:px-8 py-10 md:py-12 space-y-7">
+      <Nav />
+      <main className="w-full max-w-[1280px] mx-auto px-5 sm:px-8 pt-[110px] md:pt-[120px] pb-16 space-y-7">
         <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 items-stretch">
           <DiceCanvas phase={phase} rollUnder={rollUnder} />
           <div className="flex flex-col gap-6">

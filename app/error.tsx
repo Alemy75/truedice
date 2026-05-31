@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui/Button";
 
 export default function ErrorBoundary({
   error,
@@ -15,21 +14,40 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center text-center px-6 bg-background">
-      <h1 className="font-display font-semibold tracking-[-0.02em] text-[clamp(36px,6vw,56px)] text-foreground">
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        padding: "0 24px",
+        background: "var(--color-background)",
+      }}
+    >
+      <h1
+        className="display"
+        style={{
+          fontSize: "clamp(36px,6vw,56px)",
+          letterSpacing: "-0.02em",
+          color: "var(--color-foreground)",
+          fontWeight: 600,
+        }}
+      >
         Something broke.
       </h1>
-      <p className="mt-5 text-foreground-muted text-lg">The chain didn&rsquo;t.</p>
-      <Button
-        variant="primary"
-        size="lg"
-        goldRim
-        glow
+      <p style={{ marginTop: 20, color: "var(--color-foreground-muted)", fontSize: 18 }}>
+        The chain didn&rsquo;t.
+      </p>
+      <button
+        type="button"
         onClick={reset}
-        className="mt-9 uppercase font-bold tracking-wide"
+        className="btn btn-primary btn-lg"
+        style={{ marginTop: 36, textTransform: "uppercase", letterSpacing: "0.04em" }}
       >
         Refresh
-      </Button>
+      </button>
     </main>
   );
 }
