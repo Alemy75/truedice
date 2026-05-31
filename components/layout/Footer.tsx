@@ -7,7 +7,7 @@ const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
 /**
  * Site-wide footer.
  *
- * Mirrors `claude-design-layouts/index.html` footer 1:1.
+ * Mirrors the original Claude Design footer mockup 1:1.
  * Uses global CSS (.footer, .footer-grid, .footer-bottom, .brand-logo,
  * .addr, .escan) defined in app/globals.css.
  */
@@ -19,7 +19,7 @@ export function Footer({ id }: { id?: string }) {
           <div>
             <Link href="/" className="brand-logo footer-logo" aria-label="True Dice">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/assets/logo.png" alt="True Dice" />
+              <img src="/assets/logo.webp" alt="True Dice" />
             </Link>
             <p
               className="text-muted"

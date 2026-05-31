@@ -12,7 +12,7 @@ interface ModalProps {
 
 /**
  * Shared modal shell using `.modal-backdrop` + `.modal` CSS classes
- * from app/globals.css (mirrors claude-design-layouts/dice.html behaviour).
+ * from app/globals.css (mirrors the original Claude Design dice mockup behaviour).
  *
  * Renders via React Portal to <body> so the modal escapes any ancestor
  * containing block. The nav has `backdrop-filter: blur(5px)` which

@@ -137,7 +137,7 @@ I leaned heavily on **Claude (Anthropic)** as primary copilot through every laye
 - **Spec + Plan phase (~2h):** Claude co-authored `TASK.md` (functional spec) and `DESIGN.md` (visual system) collaboratively, then produced a detailed **27-task implementation plan** in `docs/superpowers/plans/`. The single most valuable use — execution after that was almost mechanical.
 - **Smart contract (subagent dispatch, ~10 min):** full TDD by a Claude subagent. 29 tests + fuzz test, **100% line/branch/function coverage** on `CasinoDice.sol`. The subagent got a clean context window and shipped a verified-on-Etherscan contract on first try.
 - **Frontend foundation (subagent, ~10 min):** globals.css design tokens, wagmi/RainbowKit providers, format utilities + vitest tests, ABI export, contract hooks.
-- **Design system:** visual mockups in `claude-design-layouts/` generated via **Claude Design** from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc.
+- **Design system:** visual mockups in the Claude Design mockups generated via **Claude Design** from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc.
 - **Pixel-perfect rewrite (parallel subagents, ~10 min each):** when the initial Tailwind translation diverged from the design, I dispatched two subagents to rewrite `/dice` + `/about` using raw design CSS class names from the Claude Design mockups.
 
 **Best meta-decision**: dispatching subagents **per coherent task** (whole contract, whole frontend foundation), not one mega-prompt. Fresh context window per dispatch → cleaner output, errors surface early in review.
@@ -172,7 +172,7 @@ I leaned heavily on **Claude (Anthropic)** as primary copilot through every laye
 2. Walk through `/proof/[requestId]` page — explain Chainlink VRF verification
 3. Walk through Etherscan: contract `HOUSE_EDGE_BPS()` getter, `houseBankroll` storage, `BetSettled` events
 4. **One thing I didn't know before**: Chainlink VRF v2.5 vs v2 — the silent breaking change in the consumer API and how I debugged the `"request not paid"` error
-5. Tour of the codebase: `CasinoDice.sol` (130 lines), test suite (100% coverage), the `claude-design-layouts/` source of truth
+5. Tour of the codebase: `CasinoDice.sol` (130 lines), test suite (100% coverage), the the Claude Design mockups source of truth
 
 ---
 

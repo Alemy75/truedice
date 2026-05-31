@@ -109,7 +109,7 @@ I leaned heavily on Claude (Anthropic) as primary copilot through every layer:
 - **Spec + Plan**: Claude co-authored `TASK.md`, `DESIGN.md`, and a detailed 27-task implementation plan in `docs/superpowers/plans/` over ~2h of back-and-forth. The single most valuable use — execution after that was almost mechanical.
 - **Smart contract**: full TDD by a dispatched Claude subagent. 29 tests + fuzz test, **100% line / branch / function coverage** on `CasinoDice.sol`. ~10 min wall time.
 - **Frontend foundation**: a second subagent wrote globals.css tokens, wagmi/RainbowKit providers, format utilities + vitest tests, ABI export, contract hooks. ~10 min.
-- **Design system**: visual mockups in `claude-design-layouts/` generated via Claude Design from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc.
+- **Design system**: visual mockups generated via Claude Design from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc. Raw HTML/CSS was ported directly into `app/globals.css` and React components, then the mockup folder was deleted in cleanup.
 - **Pixel-perfect rewrite**: when the initial Tailwind translation diverged from the design, I dispatched two parallel subagents to rewrite `/dice` + `/about` using raw design CSS class names. ~10 min each.
 
 **What worked best**: dispatching subagents per *coherent task* (whole contract, whole frontend foundation), not one mega-prompt. Fresh context window per dispatch → cleaner output, errors surface early in review.
@@ -210,7 +210,7 @@ pnpm tsx scripts/casino-report.ts   # live casino P&L + pending bets
 ## Stack
 
 - **Contracts**: Solidity 0.8.24, Foundry, OpenZeppelin v5.1.0, Chainlink VRF v2.5
-- **Frontend**: Next.js 15.5 (App Router), React 19, TypeScript, Tailwind v4 (`@theme` tokens) + raw design CSS, wagmi v2, viem, RainbowKit, Cinzel + Geist Sans + Geist Mono
+- **Frontend**: Next.js 15.5 (App Router), React 19, TypeScript, raw design CSS with `:root` custom-property tokens (no Tailwind), wagmi v2, viem, RainbowKit, Cinzel + Geist Sans + Geist Mono
 - **Hosting**: Vercel (frontend), Sepolia (contract)
 - **RPC**: Alchemy (HTTPS + WSS) with 4-RPC viem fallback transport
 
@@ -223,7 +223,6 @@ components/       Reusable React components — Nav, modals, NetworkBanner, etc.
 hooks/            wagmi hooks — useDicePhase, useCasinoBalance, useHouseBankroll, useBetEvents, useMyBets
 lib/              ABI export, format utilities, multiplier math, vitest tests
 public/assets/    Logo, hero banner, game tile artwork
-claude-design-layouts/  Source-of-truth design from Claude Design (HTML/CSS)
 docs/             TASK.md spec, DESIGN.md visual system, implementation plan
 scripts/          casino-report.ts (P&L + pending bets reporter)
 ```

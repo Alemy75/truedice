@@ -126,7 +126,7 @@ export default function LobbyPage() {
         <div className="lobby-grid">
           <Link href="/dice" className="tile tile-active">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="tile-img" src="/assets/games/dice.png" alt="Dice" />
+            <img className="tile-img" src="/assets/games/dice.webp" alt="Dice" />
             <span className="tile-scrim" />
             <span className="tile-badge"><span className="dot dot-gold dot-pulse" />Live</span>
             <span className="tile-name">DICE</span>
@@ -137,7 +137,7 @@ export default function LobbyPage() {
             return (
               <div key={name} className="tile tile-soon">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="tile-img" src={`/assets/games/${slug === "coinflip" ? "coinflip" : slug}.png`} alt={name} />
+                <img className="tile-img" src={`/assets/games/${slug === "coinflip" ? "coinflip" : slug}.webp`} alt={name} />
                 <span className="tile-scrim" />
                 <span className="tile-badge"><span className="dot dot-silver" />Soon</span>
                 <span className="tile-name">{name === "Coin Flip" ? "COIN FLIP" : name.toUpperCase()}</span>

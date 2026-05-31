@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { truncateAddress } from "@/lib/format";
-import { cn } from "@/lib/cn";
 
 interface AddressChipProps {
   address: string;
@@ -11,6 +10,11 @@ interface AddressChipProps {
   showCopy?: boolean;
 }
 
+/**
+ * Truncated address chip with optional click-to-copy. Uses the global
+ * .mono class for the typeface; everything else is inline-styled so the
+ * component is self-contained (no Tailwind utilities).
+ */
 export function AddressChip({
   address,
   className,
@@ -28,23 +32,30 @@ export function AddressChip({
     }
   }
 
+  const cls = ["mono", "addr-chip", className].filter(Boolean).join(" ");
+
   return (
     <button
       type="button"
       onClick={showCopy ? handleCopy : undefined}
-      className={cn(
-        "inline-flex items-center gap-1.5 font-mono text-sm text-foreground hover:text-primary transition-colors",
-        showCopy && "cursor-pointer",
-        className,
-      )}
+      className={cls}
       title={address}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 14,
+        color: "var(--color-foreground)",
+        transition: "color 150ms ease-out",
+        cursor: showCopy ? "pointer" : "default",
+      }}
     >
       {truncateAddress(address)}
       {showCopy &&
         (copied ? (
-          <Check className="w-3.5 h-3.5 text-primary" />
+          <Check style={{ width: 14, height: 14, color: "var(--color-primary)" }} />
         ) : (
-          <Copy className="w-3.5 h-3.5 text-foreground-subtle" />
+          <Copy style={{ width: 14, height: 14, color: "var(--color-foreground-subtle)" }} />
         ))}
     </button>
   );

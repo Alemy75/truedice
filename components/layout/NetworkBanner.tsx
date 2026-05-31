@@ -2,8 +2,11 @@
 
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { sepolia } from "wagmi/chains";
-import { Button } from "@/components/ui/Button";
 
+/**
+ * Wrong-network banner. Shown only when the wallet is connected to a
+ * chain other than Sepolia. Uses the .net-banner global class.
+ */
 export function NetworkBanner() {
   const { isConnected } = useAccount();
   const chainId = useChainId();
@@ -12,22 +15,19 @@ export function NetworkBanner() {
   if (!isConnected || chainId === sepolia.id) return null;
 
   return (
-    <div
-      role="alert"
-      className="bg-danger/10 border-b border-danger/40 text-danger-bright px-6 py-3 flex flex-wrap items-center justify-center gap-4 text-sm"
-    >
+    <div role="alert" className="net-banner show">
       <span>
         This app runs on Sepolia. You&rsquo;re on chain{" "}
-        <span className="font-mono">{chainId}</span>.
+        <span className="mono">{chainId}</span>.
       </span>
-      <Button
-        variant="danger"
-        size="sm"
+      <button
+        type="button"
+        className="btn btn-danger btn-sm"
         onClick={() => switchChain({ chainId: sepolia.id })}
         disabled={isPending}
       >
         {isPending ? "Switching…" : "Switch to Sepolia"}
-      </Button>
+      </button>
     </div>
   );
 }

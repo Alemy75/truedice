@@ -56,7 +56,7 @@ export function Nav() {
       <div className="container nav-inner">
         <Link href="/" className="brand-logo" aria-label="True Dice">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/logo.png" alt="True Dice" />
+          <img src="/assets/logo.webp" alt="True Dice" />
         </Link>
 
         {/* Desktop nav-links — absolutely centered; hidden on tablet/mobile */}

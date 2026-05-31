@@ -1,6 +1,7 @@
-@import "tailwindcss";
-
-@theme {
+/* Design tokens — pure CSS custom properties.
+   No Tailwind: we use raw design CSS classes throughout (.btn-*, .card,
+   .stats-grid, etc. defined below). Tokens are consumed via var(...). */
+:root {
   /* === Brand — gold spectrum === */
   --color-primary: #D4AF37;
   --color-primary-hover: #E5C76B;
@@ -769,7 +770,7 @@ img, svg { display: block; }
 
 /* ============================================================
    Proof page (provably-fair verification)
-   (from claude-design-layouts/proof.html inline <style>)
+   (ported from the original Claude Design HTML mockups)
    ============================================================ */
 .proof {
   max-width: 800px;
@@ -928,7 +929,7 @@ img, svg { display: block; }
 
 /* ============================================================
    Dice page — layout, canvas, form, tabs, banner
-   (from claude-design-layouts/dice.html inline <style>)
+   (ported from the original Claude Design HTML mockups)
    ============================================================ */
 
 /* ---- Layout ---- */
@@ -998,7 +999,7 @@ img, svg { display: block; }
   bottom: -2px;
   z-index: 2;
   pointer-events: none;
-  background-image: url("/assets/dice-frame.png");
+  background-image: url("/assets/dice-frame.webp");
   background-repeat: no-repeat;
   background-size: auto 100%;
 }
@@ -1016,7 +1017,7 @@ img, svg { display: block; }
    references .dice-frame; both new and legacy paths render. */
 .dice-frame {
   position: absolute; inset: -2px; z-index: 2; pointer-events: none;
-  background-image: url("/assets/dice-frame.png");
+  background-image: url("/assets/dice-frame.webp");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
