@@ -250,17 +250,25 @@ img, svg { display: block; }
   align-items: center;
   height: 76px;
   gap: 16px;
+  position: relative;
 }
 .nav-inner > .brand-logo { justify-self: start; }
-.nav-inner > .nav-links { justify-self: center; }
-.nav-inner > .nav-burger-wrap { justify-self: center; }
-.nav-inner > .nav-wallet { justify-self: end; }
+.nav-inner > .nav-right { justify-self: end; }
 .wordmark {
   font-family: var(--font-mono); font-weight: 600; font-size: 16px;
   text-transform: uppercase; letter-spacing: 0.18em; color: var(--color-primary);
 }
 
-.nav-links { display: flex; gap: 28px; }
+/* Desktop nav-links: absolutely centered relative to .nav-inner so the right
+   cluster width doesn't push them off-center. Hidden on tablet/mobile. */
+.nav-links {
+  display: flex;
+  gap: 28px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
 .nav-links a {
   font-size: 15px; color: var(--color-foreground-muted);
   transition: color 150ms ease-out;
@@ -268,7 +276,44 @@ img, svg { display: block; }
 }
 .nav-links a:hover { color: var(--color-primary); }
 
-/* Burger menu — hidden on desktop, shown ≤ 960px */
+/* Right cluster — BalanceDropdown + ConnectButton + Burger.
+   Equal gap between siblings (no overrides). Burger sits last (rightmost) on mobile. */
+.nav-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Branded RainbowKit-style menu trigger (used by BrandedConnectButton when
+   wallet is connected — matches .menu-trigger from claude-design-layouts/dice.html). */
+.menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-overlay);
+  color: var(--color-foreground);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: box-shadow 150ms ease-out, color 150ms ease-out;
+}
+.menu-trigger:hover {
+  color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-border-gold);
+}
+.menu-trigger .caret {
+  transition: transform 150ms ease-out;
+  opacity: 0.6;
+}
+
+/* Burger menu — hidden on desktop, shown ≤ 960px. Lives inside .nav-right
+   so on mobile it ends up rightmost (after wallet + balance dropdown). */
 .nav-burger-wrap { position: relative; display: none; }
 .nav-burger {
   display: inline-flex;
@@ -289,8 +334,8 @@ img, svg { display: block; }
 .nav-burger-menu {
   position: absolute;
   top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-6px);
+  right: 0;
+  transform: translateY(-6px);
   min-width: 180px;
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
@@ -307,7 +352,7 @@ img, svg { display: block; }
 }
 .nav-burger-menu.open {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
   pointer-events: auto;
 }
 .nav-burger-menu a {
@@ -323,8 +368,6 @@ img, svg { display: block; }
   background: var(--color-surface-overlay);
   color: var(--color-primary);
 }
-
-.nav-wallet { display: inline-flex; align-items: center; gap: 12px; }
 
 /* Switch inline links → burger on tablet/mobile (≤ 960px) */
 @media (max-width: 960px) {
