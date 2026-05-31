@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { TopBar } from "@/components/layout/TopBar";
 import { BetForm } from "@/components/dice/BetForm";
@@ -22,6 +22,16 @@ export default function DicePage() {
   const { data: balance } = useCasinoBalance();
   const { data: bankroll } = useHouseBankroll();
   const { phase, placeBet } = useDicePhase();
+  const [vrfWarning, setVrfWarning] = useState(false);
+
+  useEffect(() => {
+    if (phase.kind !== "awaiting-vrf") {
+      setVrfWarning(false);
+      return;
+    }
+    const id = setTimeout(() => setVrfWarning(true), 120_000);
+    return () => clearTimeout(id);
+  }, [phase]);
 
   const [rollUnder, setRollUnder] = useState(4950);
   const [stake, setStake] = useState("0.0010");
@@ -78,6 +88,22 @@ export default function DicePage() {
           />
         </section>
       </main>
+
+      {vrfWarning && (
+        <div
+          role="status"
+          className="fixed bottom-6 right-6 z-50 max-w-sm bg-surface-elevated border border-warning/40 rounded-lg p-4 shadow-[var(--shadow-card)] text-sm"
+        >
+          <div className="font-mono text-warning uppercase tracking-wider text-xs mb-2">
+            VRF taking longer than usual
+          </div>
+          <p className="text-foreground-muted leading-[1.55]">
+            Your stake is safe. If this persists, check Etherscan or wait 24h
+            to use{" "}
+            <code className="font-mono text-foreground">rescueStaleBet</code>.
+          </p>
+        </div>
+      )}
     </>
   );
 }
