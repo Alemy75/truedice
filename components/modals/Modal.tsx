@@ -1,63 +1,59 @@
 "use client";
 
 import { type ReactNode, useEffect } from "react";
-import { X } from "lucide-react";
-import { cn } from "@/lib/cn";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
-  title: string;
-  subtitle?: ReactNode;
+  ariaLabel: string;
   children: ReactNode;
 }
 
-export function Modal({
-  open,
-  onClose,
-  title,
-  subtitle,
-  children,
-}: ModalProps) {
+/**
+ * Shared modal shell using `.modal-backdrop` + `.modal` CSS classes
+ * from app/globals.css (mirrors claude-design-layouts/dice.html behaviour).
+ *
+ * - Backdrop click → close
+ * - ESC → close
+ * - Body scroll locked while open
+ */
+export function Modal({ open, onClose, ariaLabel, children }: ModalProps) {
   useEffect(() => {
+    if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
-    if (open) document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className={`modal-backdrop ${open ? "open" : ""}`}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-md"
-        onClick={onClose}
-      />
-      <div
+        className="modal"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
-        className={cn(
-          "relative w-full max-w-[440px] bg-surface-elevated border border-border rounded-lg shadow-[var(--shadow-card)] p-8",
-        )}
+        aria-label={ariaLabel}
       >
         <button
           type="button"
+          className="modal-close"
           onClick={onClose}
-          className="absolute top-4 right-4 text-foreground-muted hover:text-primary transition-colors"
           aria-label="Close"
         >
-          <X className="w-5 h-5" />
+          ×
         </button>
-        <h2 className="font-display text-2xl font-semibold text-foreground">
-          {title}
-        </h2>
-        {subtitle && (
-          <p className="mt-1 text-sm text-foreground-muted">{subtitle}</p>
-        )}
-        <div className="mt-6">{children}</div>
+        {children}
       </div>
     </div>
   );

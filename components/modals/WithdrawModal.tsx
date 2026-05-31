@@ -4,8 +4,6 @@ import { useState } from "react";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Modal } from "./Modal";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
 import { useCasinoContract } from "@/hooks/useCasinoContract";
 import { useCasinoBalance } from "@/hooks/useBalance";
 import { formatEth } from "@/lib/format";
@@ -70,65 +68,83 @@ export function WithdrawModal({
       : `WITHDRAW ${Number(amount || "0").toFixed(4)} ETH`;
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Withdraw ETH"
-      subtitle={
-        <>
-          Available ·{" "}
-          <span className="font-mono text-foreground">
-            {balance !== undefined ? formatEth(balance as bigint) : "—"} ETH
-          </span>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <Input
+    <Modal open={open} onClose={onClose} ariaLabel="Withdraw ETH">
+      <h2 className="display" style={{ fontSize: 24, fontWeight: 600 }}>
+        Withdraw ETH
+      </h2>
+      <p className="text-muted" style={{ fontSize: 14, marginTop: 4 }}>
+        Available ·{" "}
+        <span
+          className="mono"
+          style={{ color: "var(--color-foreground)" }}
+        >
+          {balance !== undefined ? formatEth(balance as bigint) : "—"} ETH
+        </span>
+      </p>
+
+      <div className="field-wrap" style={{ marginTop: 24 }}>
+        <input
+          className="field has-suffix"
+          inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          suffix="ETH"
-          inputMode="decimal"
+          aria-label="Withdraw amount"
         />
-        <div className="flex items-center gap-2">
-          {PRESETS.map((p) => (
-            <Button
-              key={p}
-              variant="secondary"
-              size="sm"
-              onClick={() => setAmount(Number(p).toFixed(4))}
-              className="flex-1 font-mono"
-            >
-              {p}
-            </Button>
-          ))}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={setMax}
-            className="flex-1 font-mono"
-          >
-            Max
-          </Button>
-        </div>
-        {error && (
-          <div className="text-sm text-danger-bright font-mono">{error}</div>
-        )}
-        <Button
-          variant="primary"
-          size="lg"
-          goldRim
-          glow
-          className="w-full h-14 uppercase font-bold tracking-wide mt-3"
-          onClick={onSubmit}
-          disabled={isPending || confirming}
-        >
-          {ctaLabel}
-        </Button>
-        <p className="text-xs text-foreground-subtle pt-2">
-          Funds return to your connected wallet in one transaction.
-        </p>
+        <span className="field-suffix">ETH</span>
       </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            className="btn btn-secondary btn-sm mono"
+            style={{ flex: 1 }}
+            onClick={() => setAmount(Number(p).toFixed(4))}
+          >
+            {p}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm mono"
+          style={{ flex: 1 }}
+          onClick={setMax}
+        >
+          Max
+        </button>
+      </div>
+
+      {error && (
+        <div
+          className="mono text-danger"
+          style={{ fontSize: 13, marginTop: 12 }}
+        >
+          {error}
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="btn btn-primary btn-block mono"
+        style={{
+          height: 56,
+          marginTop: 24,
+          fontFamily: "var(--font-sans)",
+          width: "100%",
+        }}
+        onClick={onSubmit}
+        disabled={isPending || confirming}
+      >
+        {ctaLabel}
+      </button>
+
+      <p
+        className="text-subtle"
+        style={{ fontSize: 12, marginTop: 16 }}
+      >
+        Funds return to your connected wallet in one transaction.
+      </p>
     </Modal>
   );
 }

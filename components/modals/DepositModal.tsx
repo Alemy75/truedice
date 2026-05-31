@@ -4,8 +4,6 @@ import { useState } from "react";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Modal } from "./Modal";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
 import { useCasinoContract } from "@/hooks/useCasinoContract";
 
 const PRESETS = ["0.01", "0.05", "0.1"];
@@ -59,59 +57,78 @@ export function DepositModal({
       : `DEPOSIT ${Number(amount || "0").toFixed(4)} ETH`;
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Deposit ETH"
-      subtitle="Your balance funds bets. Withdraw any time."
-    >
-      <div className="space-y-3">
-        <Input
+    <Modal open={open} onClose={onClose} ariaLabel="Deposit ETH">
+      <h2 className="display" style={{ fontSize: 24, fontWeight: 600 }}>
+        Deposit ETH
+      </h2>
+      <p className="text-muted" style={{ fontSize: 14, marginTop: 4 }}>
+        Your balance funds bets. Withdraw any time.
+      </p>
+
+      <div className="field-wrap" style={{ marginTop: 24 }}>
+        <input
+          className="field has-suffix"
+          inputMode="decimal"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          suffix="ETH"
-          inputMode="decimal"
+          aria-label="Deposit amount"
         />
-        <div className="flex items-center gap-2">
-          {PRESETS.map((p) => (
-            <Button
-              key={p}
-              variant="secondary"
-              size="sm"
-              onClick={() => setAmount(Number(p).toFixed(4))}
-              className="flex-1 font-mono"
-            >
-              {p}
-            </Button>
-          ))}
-        </div>
-        {error && (
-          <div className="text-sm text-danger-bright font-mono">{error}</div>
-        )}
-        <Button
-          variant="primary"
-          size="lg"
-          goldRim
-          glow
-          className="w-full h-14 uppercase font-bold tracking-wide mt-3"
-          onClick={onSubmit}
-          disabled={isPending || confirming}
-        >
-          {ctaLabel}
-        </Button>
-        <p className="text-xs text-foreground-subtle pt-2">
-          Need Sepolia ETH? Get some at{" "}
-          <a
-            href="https://sepoliafaucet.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline hover:text-primary-hover"
-          >
-            sepoliafaucet.com
-          </a>
-          .
-        </p>
+        <span className="field-suffix">ETH</span>
       </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            className="btn btn-secondary btn-sm mono"
+            style={{ flex: 1 }}
+            onClick={() => setAmount(Number(p).toFixed(4))}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div
+          className="mono text-danger"
+          style={{ fontSize: 13, marginTop: 12 }}
+        >
+          {error}
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="btn btn-primary btn-block mono"
+        style={{
+          height: 56,
+          marginTop: 24,
+          fontFamily: "var(--font-sans)",
+          width: "100%",
+        }}
+        onClick={onSubmit}
+        disabled={isPending || confirming}
+      >
+        {ctaLabel}
+      </button>
+
+      <p
+        className="text-subtle"
+        style={{ fontSize: 12, marginTop: 16 }}
+      >
+        Need Sepolia ETH? Get some at{" "}
+        <a
+          className="escan"
+          href="https://sepoliafaucet.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--color-primary)" }}
+        >
+          <span className="escan-label">sepoliafaucet.com</span> ↗
+        </a>
+      </p>
     </Modal>
   );
 }
