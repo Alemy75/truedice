@@ -108,7 +108,6 @@ export default function LobbyPage() {
                 <span className="tile-scrim" />
                 <span className="tile-badge"><span className="dot dot-silver" />Soon</span>
                 <span className="tile-name">{name === "Coin Flip" ? "COIN FLIP" : name.toUpperCase()}</span>
-                <span className="tile-desc"></span>
               </div>
             );
           })}

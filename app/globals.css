@@ -516,7 +516,7 @@ img, svg { display: block; }
 .lobby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
 .tile {
   aspect-ratio: 1; background: var(--color-surface); border-radius: var(--radius-lg);
-  position: relative; padding: 24px; display: flex; flex-direction: column;
+  position: relative; padding: 16px; display: flex; flex-direction: column;
   transition: box-shadow 200ms ease-out, border-color 200ms ease-out;
   overflow: hidden;
   border: 1px solid rgba(212, 175, 55, 0.45);
