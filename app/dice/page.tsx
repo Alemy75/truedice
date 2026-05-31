@@ -6,6 +6,7 @@ import { useAccount } from "wagmi";
 import { parseEther } from "viem";
 import confetti from "canvas-confetti";
 import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 import { AddressChip } from "@/components/ui/AddressChip";
 import { useDicePhase } from "@/hooks/useDicePhase";
 import { useCasinoBalance } from "@/hooks/useBalance";
@@ -371,7 +372,7 @@ export default function DicePage() {
                     className="mono"
                     style={{ color: "var(--color-foreground-muted)" }}
                   >
-                    {balance !== undefined ? formatEth(balance as bigint) : "—"} ETH
+                    {balance !== undefined ? formatEthSmart(balance as bigint) : "—"} ETH
                   </span>
                 </span>
               </div>
@@ -423,7 +424,7 @@ export default function DicePage() {
                 <span
                   className={`val-mono ${profit > 0n ? "text-gold" : "text-subtle"}`}
                 >
-                  {profit > 0n ? `+${formatEth(profit)} ETH` : "—"}
+                  {profit > 0n ? `+${formatEthSmart(profit)} ETH` : "—"}
                 </span>
               </div>
             </div>
@@ -477,6 +478,8 @@ export default function DicePage() {
           </div>
         </div>
       </main>
+
+      <Footer id="feed" />
 
       {vrfWarning && (
         <div role="status" className="vrf-stall">
@@ -565,7 +568,7 @@ function BetsTable({
                   <span className="text-subtle">…</span>
                 )}
               </td>
-              <td className="num mono">{formatEth(r.stake)}</td>
+              <td className="num mono">{formatEthSmart(r.stake)}</td>
               <td
                 className={`num mono ${
                   r.settled && r.won ? "text-gold" : "text-subtle"

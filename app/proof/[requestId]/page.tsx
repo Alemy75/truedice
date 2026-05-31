@@ -4,6 +4,7 @@ import { use, useMemo } from "react";
 import Link from "next/link";
 import { useReadContract } from "wagmi";
 import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 import { ProofStep, KV } from "@/components/proof/ProofStep";
 import { EtherscanLink } from "@/components/ui/EtherscanLink";
 import { AddressChip } from "@/components/ui/AddressChip";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { useCasinoContract } from "@/hooks/useCasinoContract";
 import {
   formatEth,
+  formatEthSmart,
   formatPercentBps,
   formatMultiplierBps,
 } from "@/lib/format";
@@ -146,7 +148,7 @@ export default function ProofPage({
                 />
                 <KV
                   label="Stake"
-                  value={`${formatEth(data.stake)} ETH`}
+                  value={`${formatEthSmart(data.stake)} ETH`}
                 />
                 <KV
                   label="Roll Under"
@@ -232,8 +234,8 @@ ${data.result} ${data.won ? "<" : ">="} ${data.rollUnder} (rollUnder)
 payout = ${
                         data.won
                           ? `stake × multiplier
-       = ${formatEth(data.stake)} × ${formatMultiplierBps(data.multiplierBps)}
-       = ${formatEth(data.payout ?? 0n)} ETH`
+       = ${formatEthSmart(data.stake)} × ${formatMultiplierBps(data.multiplierBps)}
+       = ${formatEthSmart(data.payout ?? 0n)} ETH`
                           : `0.0000 ETH`
                       }`}
                     </pre>
@@ -274,6 +276,7 @@ payout = ${
           </>
         )}
       </main>
+      <Footer />
     </>
   );
 }

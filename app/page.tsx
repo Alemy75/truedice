@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 import { useBetEvents } from "@/hooks/useBetEvents";
-import { formatEth, formatRelativeTime, truncateAddress } from "@/lib/format";
-
-const CONTRACT = process.env.NEXT_PUBLIC_CASINO_CONTRACT as `0x${string}` | undefined;
-const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
+import { formatEthSmart, formatRelativeTime, truncateAddress } from "@/lib/format";
 
 export default function LobbyPage() {
   const events = useBetEvents();
@@ -74,7 +72,7 @@ export default function LobbyPage() {
           <div className="stats-grid">
             <div className="stat">
               <div className="eyebrow">Total Wagered</div>
-              <div className="stat-value">{formatEth(stats.totalWagered, 4)} ETH</div>
+              <div className="stat-value">{formatEthSmart(stats.totalWagered)} ETH</div>
             </div>
             <div className="stat">
               <div className="eyebrow">Bets Settled</div>
@@ -82,7 +80,7 @@ export default function LobbyPage() {
             </div>
             <div className="stat">
               <div className="eyebrow">Biggest Win · 24h</div>
-              <div className="stat-value text-gold">+{formatEth(stats.biggestWin24h, 4)} ETH</div>
+              <div className="stat-value text-gold">+{formatEthSmart(stats.biggestWin24h)} ETH</div>
             </div>
           </div>
         </section>
@@ -127,7 +125,7 @@ export default function LobbyPage() {
                 <span key={`${e.requestId.toString()}-${i}`} className="mq-item">
                   <span className="addr"><span className="addr-text mono">{truncateAddress(e.player)}</span></span>
                   <span className="text-subtle">won</span>
-                  <span className={big ? "mono text-gold" : "mono"}>+{formatEth(e.payout!, 4)} ETH</span>
+                  <span className={big ? "mono text-gold" : "mono"}>+{formatEthSmart(e.payout!)} ETH</span>
                   <span className="text-subtle">on</span>
                   <span>Dice</span>
                   <span className="text-subtle">·</span>
@@ -139,54 +137,7 @@ export default function LobbyPage() {
         </div>
       )}
 
-      {/* FOOTER */}
-      <footer className="footer" id="feed">
-        <div className="container">
-          <div className="footer-grid">
-            <div>
-              <Link href="/" className="brand-logo footer-logo" aria-label="True Dice">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/assets/logo.png" alt="True Dice" />
-              </Link>
-              <p className="text-muted" style={{ fontSize: 14, marginTop: 14, maxWidth: 280 }}>
-                Provably fair, on-chain dice. No house secrets.
-              </p>
-            </div>
-            <div>
-              <div className="eyebrow" style={{ marginBottom: 12 }}>Contract</div>
-              {CONTRACT ? (
-                <>
-                  <span className="addr"><span className="addr-text mono">{truncateAddress(CONTRACT)}</span></span>
-                  <div style={{ marginTop: 10 }}>
-                    <a
-                      className="escan"
-                      href={`${ETHERSCAN_BASE}/address/${CONTRACT}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <span className="escan-label" style={{ fontSize: 13 }}>View on Etherscan</span> ↗
-                    </a>
-                  </div>
-                </>
-              ) : (
-                <span className="mono text-subtle">—</span>
-              )}
-            </div>
-            <div>
-              <div className="eyebrow" style={{ marginBottom: 12 }}>Resources</div>
-              <div className="footer-links">
-                <a href="https://github.com/Alemy75/truedice" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
-                <Link href="/about">Provably Fair ↗</Link>
-                <Link href="/about">About ↗</Link>
-              </div>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <span>© 2026 True Dice · A TrueLabel product</span>
-            <span>Testnet only. Not available where prohibited.</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

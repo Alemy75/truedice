@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 
 const CONTRACT = process.env.NEXT_PUBLIC_CASINO_CONTRACT;
 const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
@@ -135,6 +136,7 @@ RTP        = winChance × multiplier
           </div>
         </section>
       </main>
+      <Footer />
     </>
   );
 }
