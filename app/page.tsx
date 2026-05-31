@@ -1,127 +1,215 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
-import { TopBar } from "@/components/layout/TopBar";
-import { HeroBlock } from "@/components/lobby/HeroBlock";
-import { StatsBar } from "@/components/lobby/StatsBar";
-import { GameTile } from "@/components/lobby/GameTile";
-import { LiveTicker } from "@/components/lobby/LiveTicker";
-import { EtherscanLink } from "@/components/ui/EtherscanLink";
-import { truncateAddress } from "@/lib/format";
+import { useEffect, useMemo, useState } from "react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useBetEvents } from "@/hooks/useBetEvents";
+import { formatEth, formatRelativeTime, truncateAddress } from "@/lib/format";
 
-const CONTRACT = process.env.NEXT_PUBLIC_CASINO_CONTRACT;
+const CONTRACT = process.env.NEXT_PUBLIC_CASINO_CONTRACT as `0x${string}` | undefined;
+const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
 
-export default function Page() {
+export default function LobbyPage() {
+  const events = useBetEvents();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Aggregate stats from on-chain events
+  const stats = useMemo(() => {
+    let totalWagered = 0n;
+    let biggestWin24h = 0n;
+    let settled = 0;
+    const cutoff = Date.now() / 1000 - 86400;
+    for (const e of events) {
+      totalWagered += e.stake;
+      if (e.settled) {
+        settled++;
+        if (e.won && e.timestamp >= cutoff && e.payout && e.payout > biggestWin24h) {
+          biggestWin24h = e.payout;
+        }
+      }
+    }
+    return { totalWagered, biggestWin24h, settled };
+  }, [events]);
+
+  // Marquee items — recent wins only
+  const wins = events.filter((e) => e.settled && e.won && e.payout && e.payout > 0n).slice(0, 20);
+  const marqueeItems = wins.length > 0 ? [...wins, ...wins] : [];
+
   return (
     <>
-      <TopBar />
-      <main>
-        <HeroBlock />
-
-        {/* Lobby block: stats + games merged */}
-        <section className="max-w-[1280px] mx-auto px-6 pt-16 pb-22">
-          <StatsBar />
-
-          <div className="mt-14 mb-8 flex flex-col gap-2">
-            <h2 className="font-display font-semibold tracking-[-0.02em] text-[clamp(32px,5vw,40px)] text-foreground">
-              Games
-            </h2>
-            <span className="text-foreground-muted text-base whitespace-nowrap">
-              One live. More coming.
-            </span>
+      {/* NAV */}
+      <nav className={`nav ${scrolled ? "scrolled" : ""}`} data-nav>
+        <div className="container nav-inner">
+          <Link href="/" className="brand-logo" aria-label="True Dice">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/logo.png" alt="True Dice" />
+          </Link>
+          <div className="nav-links">
+            <Link href="/dice">Dice</Link>
+            <Link href="/dice#feed">Live</Link>
+            <Link href="/about">About</Link>
           </div>
+          <div style={{ marginLeft: "auto" }}>
+            <ConnectButton showBalance={false} chainStatus="icon" accountStatus={{ smallScreen: "avatar", largeScreen: "address" }} />
+          </div>
+        </div>
+      </nav>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
-            <GameTile
-              name="Dice"
-              description="Chainlink VRF"
-              href="/dice"
-              state="live"
-              image="/assets/games/dice.png"
-            />
-            <GameTile name="Slots" state="soon" image="/assets/games/slots.png" />
-            <GameTile name="Plinko" state="soon" image="/assets/games/plinko.png" />
-            <GameTile name="Roulette" state="soon" image="/assets/games/roulette.png" />
-            <GameTile name="Coin Flip" state="soon" image="/assets/games/coinflip.png" />
+      {/* HERO */}
+      <header className="hero">
+        <div className="hero-banner">
+          <picture>
+            <source media="(max-width: 700px)" srcSet="/assets/hero-mobile.webp" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/hero-desktop.webp" alt="True Dice" />
+          </picture>
+        </div>
+        <div className="container hero-inner">
+          <div className="hero-text">
+            <div className="hero-eyebrow">ON-CHAIN · CHAINLINK VRF · ETHEREUM SEPOLIA</div>
+            <h1>
+              Provably fair dice.
+              <br />
+              <span className="gold">No house secrets.</span>
+            </h1>
+            <p className="hero-sub">
+              Every roll is decided by Chainlink VRF and settled in a single transaction.
+              Verify any outcome on Etherscan in under a minute.
+            </p>
+            <div className="hero-cta">
+              <Link href="/dice" className="btn btn-primary btn-xl">Enter Casino</Link>
+              <Link href="/about" className="btn btn-ghost btn-xl">How it works</Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* LOBBY (stats + games) */}
+      <main className="lobby-block container">
+        {/* STATS */}
+        <section className="stats">
+          <div className="stats-grid">
+            <div className="stat">
+              <div className="eyebrow">Total Wagered</div>
+              <div className="stat-value">{formatEth(stats.totalWagered, 4)} ETH</div>
+            </div>
+            <div className="stat">
+              <div className="eyebrow">Bets Settled</div>
+              <div className="stat-value">{stats.settled.toLocaleString()}</div>
+            </div>
+            <div className="stat">
+              <div className="eyebrow">Biggest Win · 24h</div>
+              <div className="stat-value text-gold">+{formatEth(stats.biggestWin24h, 4)} ETH</div>
+            </div>
           </div>
         </section>
 
-        <LiveTicker />
+        {/* GAMES */}
+        <section className="section-head">
+          <h2>Games</h2>
+          <span className="text-muted" style={{ fontSize: 16, whiteSpace: "nowrap" }}>One live. More coming.</span>
+        </section>
+        <div className="lobby-grid">
+          <Link href="/dice" className="tile tile-active">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="tile-img" src="/assets/games/dice.png" alt="Dice" />
+            <span className="tile-scrim" />
+            <span className="tile-badge"><span className="dot dot-gold dot-pulse" />Live</span>
+            <span className="tile-name">DICE</span>
+            <span className="tile-desc">Chainlink VRF</span>
+          </Link>
+          {(["Slots", "Plinko", "Roulette", "Coin Flip"] as const).map((name) => {
+            const slug = name.toLowerCase().replace(" ", "");
+            return (
+              <div key={name} className="tile tile-soon">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="tile-img" src={`/assets/games/${slug === "coinflip" ? "coinflip" : slug}.png`} alt={name} />
+                <span className="tile-scrim" />
+                <span className="tile-badge"><span className="dot dot-silver" />Soon</span>
+                <span className="tile-name">{name === "Coin Flip" ? "COIN FLIP" : name.toUpperCase()}</span>
+                <span className="tile-desc"></span>
+              </div>
+            );
+          })}
+        </div>
+      </main>
 
-        <footer
-          id="live"
-          className="border-t border-border-subtle pt-18 pb-10"
-        >
-          <div className="max-w-[1280px] mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr] gap-10">
-              <div>
-                <Link href="/" aria-label="True Dice" className="inline-flex">
-                  <Image
-                    src="/assets/logo.png"
-                    alt="True Dice"
-                    width={120}
-                    height={26}
-                    className="h-[26px] w-auto"
-                  />
-                </Link>
-                <p className="text-foreground-muted text-sm mt-3.5 max-w-[280px]">
-                  Provably fair, on-chain dice. No house secrets.
-                </p>
-              </div>
-              <div className="md:text-center">
-                <div className="eyebrow mb-3">Contract</div>
-                {CONTRACT ? (
-                  <div className="space-y-2 md:flex md:flex-col md:items-center">
-                    <span className="font-mono text-sm text-foreground">
-                      {truncateAddress(CONTRACT)}
-                    </span>
-                    <EtherscanLink
-                      type="address"
-                      value={CONTRACT}
-                      label="View on Etherscan"
-                      className="text-sm text-foreground-muted hover:text-primary"
-                    />
-                  </div>
-                ) : (
-                  <span className="font-mono text-sm text-foreground-subtle">
-                    —
-                  </span>
-                )}
-              </div>
-              <div className="md:text-right">
-                <div className="eyebrow mb-3">Resources</div>
-                <div className="flex flex-col gap-3 md:items-end">
-                  <a
-                    href="https://github.com/Alemy75/truedice"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-foreground-muted hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    GitHub ↗
-                  </a>
-                  <Link
-                    href="/about"
-                    className="text-sm text-foreground-muted hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    Provably Fair ↗
-                  </Link>
-                  <Link
-                    href="/about"
-                    className="text-sm text-foreground-muted hover:text-primary transition-colors whitespace-nowrap"
-                  >
-                    About ↗
-                  </Link>
-                </div>
-              </div>
+      {/* MARQUEE */}
+      {marqueeItems.length > 0 && (
+        <div className="marquee-wrap">
+          <div className="marquee-track" id="marquee">
+            {marqueeItems.map((e, i) => {
+              const big = e.payout && e.payout >= 1_000_000_000_000_000_000n;
+              return (
+                <span key={`${e.requestId.toString()}-${i}`} className="mq-item">
+                  <span className="addr"><span className="addr-text mono">{truncateAddress(e.player)}</span></span>
+                  <span className="text-subtle">won</span>
+                  <span className={big ? "mono text-gold" : "mono"}>+{formatEth(e.payout!, 4)} ETH</span>
+                  <span className="text-subtle">on</span>
+                  <span>Dice</span>
+                  <span className="text-subtle">·</span>
+                  <span className="mono text-subtle">{formatRelativeTime(e.timestamp)}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* FOOTER */}
+      <footer className="footer" id="feed">
+        <div className="container">
+          <div className="footer-grid">
+            <div>
+              <Link href="/" className="brand-logo footer-logo" aria-label="True Dice">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/assets/logo.png" alt="True Dice" />
+              </Link>
+              <p className="text-muted" style={{ fontSize: 14, marginTop: 14, maxWidth: 280 }}>
+                Provably fair, on-chain dice. No house secrets.
+              </p>
             </div>
-            <div className="mt-14 pt-7 border-t border-border-subtle flex flex-wrap justify-between gap-4 text-[13px] text-foreground-subtle">
-              <span>© 2026 True Dice · A TrueLabel product</span>
-              <span className="md:text-right">
-                Testnet only. Not available where prohibited.
-              </span>
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 12 }}>Contract</div>
+              {CONTRACT ? (
+                <>
+                  <span className="addr"><span className="addr-text mono">{truncateAddress(CONTRACT)}</span></span>
+                  <div style={{ marginTop: 10 }}>
+                    <a
+                      className="escan"
+                      href={`${ETHERSCAN_BASE}/address/${CONTRACT}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span className="escan-label" style={{ fontSize: 13 }}>View on Etherscan</span> ↗
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <span className="mono text-subtle">—</span>
+              )}
+            </div>
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 12 }}>Resources</div>
+              <div className="footer-links">
+                <a href="https://github.com/Alemy75/truedice" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+                <Link href="/about">Provably Fair ↗</Link>
+                <Link href="/about">About ↗</Link>
+              </div>
             </div>
           </div>
-        </footer>
-      </main>
+          <div className="footer-bottom">
+            <span>© 2026 True Dice · A TrueLabel product</span>
+            <span>Testnet only. Not available where prohibited.</span>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }
