@@ -259,7 +259,10 @@ img, svg { display: block; }
   grid-template-columns: auto 1fr auto;
   align-items: center;
   height: 76px;
-  gap: 16px;
+  /* No grid `gap` — the centered nav-links are absolutely positioned so
+     the 1fr column is empty; any inter-column gap would just become a
+     stray right-pad on the logo and stray left-pad on the right cluster.
+     Container provides 32px gutters on the outside; that's enough. */
   position: relative;
 }
 .nav-inner > .brand-logo { justify-self: start; }
