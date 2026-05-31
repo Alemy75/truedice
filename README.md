@@ -5,64 +5,157 @@ Verifiable casino dice on Ethereum Sepolia. Every roll is decided by Chainlink V
 **Submission for the Vibe-Code 48h Frontend Challenge (May 30 – June 1, 2026).**
 
 - **Live**: https://truedice.vercel.app *(replace with final Vercel URL)*
-- **Contract**: [`0xAfF7cF9887b2e59D7402BEb3CDc7822e3DE8eB9A`](https://sepolia.etherscan.io/address/0xAfF7cF9887b2e59D7402BEb3CDc7822e3DE8eB9A) — verified source on Sepolia Etherscan
+- **Contract**: [`0xAfF7cF9887...3DE8eB9A`](https://sepolia.etherscan.io/address/0xAfF7cF9887b2e59D7402BEb3CDc7822e3DE8eB9A) — verified source on Sepolia Etherscan
 - **Repo**: https://github.com/Alemy75/truedice
+- **Loom**: *(to be added — 5 min walkthrough)*
 
 ---
 
-## 💰 Casino Economics — the casino has a real, enforced edge
+## 🎯 The contest checklist, point by point
+
+| Contest requirement | How we hit it |
+|---|---|
+| Connect wallet | RainbowKit (MetaMask / WalletConnect / Coinbase) |
+| Deposit test tokens | `deposit()` payable — ETH lives in contract |
+| Play and win/lose | Slider-driven dice (2%-98% win chance), Chainlink VRF rolls |
+| Withdraw to wallet | `withdraw(amount)` — instant, single-tx |
+| **Verifiable on-chain** | Verified contract + per-roll `/proof/[requestId]` page + Etherscan deep-links |
+| **Casino has an edge** | 1.00% house edge — **immutable bytecode constant, fuzz-tested**, see [Casino math](#-casino-math-the-1-edge-mathematically-enforced) below |
+| Polished UX | Cinzel + gold-on-warm-black design, error states, network mismatch banner, branded 404 |
+
+---
+
+## ✅ What works
+
+- **Wallet connect** via RainbowKit (MetaMask + WalletConnect + Coinbase Wallet)
+- **Deposit / withdraw** test ETH against an internal balance held by the casino contract
+- **Place a bet** with configurable win-chance slider (2%-98%), live multiplier + payout readouts
+- **Provably fair randomness** via Chainlink VRF v2.5 (`request → fulfillment → settle` visible on-chain)
+- **Live event feed** of all bets via WebSocket — updates in real time
+- **Personal bet history** filtered by indexed player address
+- **`/proof/[requestId]`** page — 4-step breakdown with Etherscan deep-links for every step
+- **House edge baked into math** — see [Casino math](#-casino-math-the-1-edge-mathematically-enforced) below
+- **VRF outage rescue**: `rescueStaleBet(requestId)` lets any user recover their stake 24h after a stalled VRF request
+- **Network mismatch banner** with one-click "Switch to Sepolia"
+- **404 + error boundary** with branded copy
+
+## ⚠ What doesn't (and why)
+
+- **No mainnet deploy** — contest is testnet-only by rules
+- **No mobile-deep-link WalletConnect** — desktop-focused for the time budget
+- **No commit-reveal RNG fallback** — relying on Chainlink VRF + 24h `rescueStaleBet` was a deliberate scope decision
+- **No auto-bet / martingale strategies** — scoped as stretch goal, deprioritized for visual polish
+- **No subgraph for historical aggregates** — all reads are direct via wagmi against the contract
+
+---
+
+## Why Ethereum Sepolia (and not Solana)
+
+I considered Solana Devnet seriously. For a real-money casino product, sub-second blocks and sub-cent fees are attractive. I picked Ethereum anyway because:
+
+1. **48-hour Rust learning-curve risk** — Anchor + IDL + Switchboard VRF would have eaten hours on unfamiliar tooling errors. EVM is well-trodden ground.
+2. **Casino + VRF reference patterns are far more abundant on EVM** — needed Chainlink VRF v2.5 integration to ship in 48h.
+3. **Solana's outage history** is a real concern for a real-money casino.
+
+**Sepolia specifically** because: free faucet ETH = contest judges can test it without funding wallets, 12s blocks turn into a UI trust-signal ("we wait *because* VRF is real"), and Chainlink VRF v2.5 has the freshest Sepolia coordinator support of any testnet.
+
+---
+
+## 🚀 Production migration: Sepolia → Base L2
+
+Sepolia is correct for the **demo**. For a real-money ship, the only sensible target is an L2 — gas on Ethereum L1 would be ~$13.50 per `placeBet()`, killing the product silently. Concrete numbers for Base (Coinbase L2), which is what I'd ship:
+
+| Business action | Sepolia (now) | **Base L2 (production)** |
+|---|---|---|
+| Min bet | 0.0001 ETH (demo) | **0.005 ETH (~$15)** |
+| Cost per `placeBet()` (user pays) | $0 testnet | **~$0.06** |
+| Cost per VRF callback (casino pays) | ~2 LINK (broken price feed) | **~$0.012 native ETH** |
+| Casino profit per bet (net of VRF) | n/a | **+$0.138** at $15 stake |
+| Block confirmation | 12 s | **2 s** |
+| Withdraw contract → wallet | instant | **instant** |
+| Wallet → Coinbase (off-ramp) | n/a | **5-15 min, ~$1** (Base is Coinbase's native L2) |
+| Wallet → Ethereum L1 (if needed) | n/a | **5-15 min, 0.3%** via Across/Hop bridge |
+
+**Why Base wins**: Chainlink VRF v2.5 already deployed, Coinbase Wallet integration end-to-end, biggest L2 user base, EVM-identical (our contract ports unchanged).
+
+**What changes in code**: VRF coordinator address, chain config in `lib/wagmi.ts`, new VRF subscription funded with native ETH instead of LINK. **~1 hour total.**
+
+**On the 7-day "withdraw to L1" myth**: optimistic rollups technically need 7 days to challenge-period the native bridge. In practice no one uses it — fast bridges (Across, Hop) cost 0.3% and take 5-15 minutes, and most users off-ramp via Coinbase directly on Base. Player-facing UX = sub-15-min withdrawal to fiat.
+
+---
+
+## 🧩 Hardest unknown I figured out
+
+**Chainlink VRF v2.5 vs v2 on Sepolia.** Most tutorials are still on VRF v2, but v2.5 is current production — different coordinator addresses, different key hash, fundamentally different consumer API (`VRFConsumerBaseV2Plus`, `RandomWordsRequest` struct with `extraArgs` for native vs LINK payment).
+
+Burned ~2 hours debugging a "request not paid" error before realizing the contract was importing v2 interfaces against a v2.5 coordinator. Fix: pin `chainlink-brownie-contracts@1.3.0` and the v2.5 Sepolia coordinator (`0x9DdfaCa8...`).
+
+Bonus quirk: Sepolia's LINK/ETH price feed is so depressed that a 200k-gas callback can cost **40+ LINK** during gas spikes (mainnet equivalent: ~2 LINK). Documented as a known testnet quirk — solved in production by switching to native ETH payment.
+
+## 🔮 What I'd build next
+
+1. **L2 deploy (Base)** — see migration table above. Highest-impact unlock.
+2. **Multiple games** — Plinko + Slots reuse the VRF + event-feed plumbing with minimal contract changes.
+3. **Ring buffer fix in `_pushRecent`** — current O(N) shift-array burns ~140k gas per VRF callback after first 50 bets. Switching to index-pointer circular buffer reduces callback gas 3×.
+4. **Native ETH VRF payment** — sidesteps the LINK/ETH price-feed quirk above. One-line change.
+5. **Auto-bet** with martingale / Fibonacci + stop-loss/stop-win.
+6. **Subgraph** for ROI charts and leaderboards.
+7. **NFT-gated VIP tier** — own an ERC-721, get reduced (non-zero) house edge.
+
+## 🤖 How I used AI tools
+
+I leaned heavily on Claude (Anthropic) as primary copilot through every layer:
+
+- **Spec + Plan**: Claude co-authored `TASK.md`, `DESIGN.md`, and a detailed 27-task implementation plan in `docs/superpowers/plans/` over ~2h of back-and-forth. The single most valuable use — execution after that was almost mechanical.
+- **Smart contract**: full TDD by a dispatched Claude subagent. 29 tests + fuzz test, **100% line / branch / function coverage** on `CasinoDice.sol`. ~10 min wall time.
+- **Frontend foundation**: a second subagent wrote globals.css tokens, wagmi/RainbowKit providers, format utilities + vitest tests, ABI export, contract hooks. ~10 min.
+- **Design system**: visual mockups in `claude-design-layouts/` generated via Claude Design from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc.
+- **Pixel-perfect rewrite**: when the initial Tailwind translation diverged from the design, I dispatched two parallel subagents to rewrite `/dice` + `/about` using raw design CSS class names. ~10 min each.
+
+**What worked best**: dispatching subagents per *coherent task* (whole contract, whole frontend foundation), not one mega-prompt. Fresh context window per dispatch → cleaner output, errors surface early in review.
+
+**What didn't**: mechanically translating the design HTML into Tailwind utilities lost fidelity at every step (wrong button sizes, container overflow, mismatched fonts). The right call was dropping back to the raw design CSS — let the designer's CSS do its job, React-ify only the dynamic parts.
+
+---
+
+# 📐 Technical deep-dive
+
+## 💰 Casino math: the 1% edge, mathematically enforced
 
 > Contest requirement: *"The casino has an edge — this is a casino, not a charity."*
 
-This is the most important property of the product. The edge is enforced in **three independent layers**, mathematically provable, and verifiable on-chain by any user.
+The edge is enforced in **three independent layers**, all verifiable on-chain by any user.
 
-### 1. House Edge = 1.00%, enforced as an immutable contract constant
-
-In `contracts/src/CasinoDice.sol`:
+### 1. House Edge = 1.00%, immutable contract constant
 
 ```solidity
 uint256 public constant HOUSE_EDGE_BPS = 100;  // 1.00%, immutable
 ```
 
-Baked into the verified bytecode at the contract address above. **Cannot be changed by anyone — including the deployer — without redeploying a new contract.** Anyone can read this constant from Etherscan:
+Baked into verified bytecode. Cannot be changed by anyone — including the deployer — without redeploying. Query via Etherscan: `contract.HOUSE_EDGE_BPS() → 100`.
 
-```
-contract.HOUSE_EDGE_BPS() → 100
-```
-
-### 2. RTP = `(10000 − HOUSE_EDGE_BPS) / 10000` = **≤ 99.00%**, mathematically
-
-The payout multiplier formula:
+### 2. RTP ≤ 99.00%, mathematically proven
 
 ```
 multiplierBps = (10000 × (10000 − HOUSE_EDGE_BPS)) / rollUnder
-              = 99_000_000 / rollUnder        ← Solidity integer division
+              = 99_000_000 / rollUnder        ← Solidity floor division
+
+RTP = P(win) × multiplier
+    = (rollUnder × multiplierBps) / 10⁸
+    ≤ (rollUnder × 99_000_000 / rollUnder) / 10⁸   [floor inequality]
+    = 0.99 = 99%
 ```
 
-Expected value (RTP) for a player betting 1 ETH:
+Floor division on `99_000_000 / rollUnder` can only **reduce** the multiplier → casino edge is **≥ 1%**, never less.
 
-```
-P(win) = rollUnder / 10000
-M      = multiplierBps / 10000
-RTP    = P(win) × M
-       = (rollUnder × multiplierBps) / 10⁸
-       ≤ (rollUnder × 99_000_000 / rollUnder) / 10⁸   [floor inequality]
-       = 99_000_000 / 10⁸
-       = 0.99 = 99%
-```
+| rollUnder | Multiplier (used) | Actual RTP |
+|---|---|---|
+| 4950 (49.5%) | 2.0000× | **99.0000%** |
+| 200 (2.0%) | 49.5000× | **99.0000%** |
+| 9800 (98.0%) | 1.0102× | **98.9996%** |
+| 7777 (77.77%) | 1.2730× | **98.9961%** |
 
-**RTP is mathematically capped at 99%**. Solidity's `floor` division on `99_000_000 / rollUnder` rounds *down* the multiplier, which can only **reduce** the player's actual payout. So the casino's edge is **≥ 1.00%**, never less.
-
-| rollUnder | True multiplier | Used (after `floor`) | Actual RTP |
-|---|---|---|---|
-| 4950 (49.5%) | 2.0000× | 2.0000× | **99.0000%** (exact) |
-| 200 (2.0%) | 49.5000× | 49.5000× | **99.0000%** (exact) |
-| 9800 (98.0%) | 10102.04 / 10000 | 1.0102× | **98.9996%** |
-| 7777 (77.77%) | 12730.49 / 10000 | 1.2730× | **98.9961%** |
-
-### 3. Bankroll safety: max bet ≤ 1% of casino bankroll
-
-To prevent a single high-multiplier bet from draining the casino (variance risk), `placeBet()` enforces:
+### 3. Bankroll safety: max bet ≤ 1% of bankroll
 
 ```solidity
 uint256 maxBankrollRisk = stake * (multiplierBps - 10000) / 10000;
@@ -71,197 +164,55 @@ if (maxBankrollRisk * 10000 > houseBankroll * MAX_BET_BPS_OF_BANKROLL) {
 }
 ```
 
-With `MAX_BET_BPS_OF_BANKROLL = 100`, the maximum potential loss from any single bet is **1% of current bankroll**. The casino cannot be wiped out by one lucky 49.5× roll.
+With `MAX_BET_BPS_OF_BANKROLL = 100`, a single bet can never lose more than 1% of bankroll. No single roll can wipe the casino.
 
-### 4. Empirically proven via fuzz tests
+### 4. Empirically verified via fuzz tests
 
-`contracts/test/CasinoDice.t.sol::testFuzz_HouseEdgeConverges` runs **256 fuzz iterations** of 200 simulated bets each. After each batch:
+`contracts/test/CasinoDice.t.sol::testFuzz_HouseEdgeConverges` runs 256 fuzz iterations of 200 bets each. After each batch:
 
 ```
-expectedHousePnL ≈ totalWagered × 0.01            // 1% of wagered
-assert |actualPnL − expectedHousePnL| ≤ 0.3 ETH   // ~4σ tolerance for n=200
+expectedHousePnL ≈ totalWagered × 0.01
+assert |actualPnL − expectedHousePnL| ≤ 0.3 ETH   // ~4σ tolerance
 ```
 
-Test passes with **100% line / branch / function coverage** on `CasinoDice.sol`. Reproducible locally:
+Test passes with **100% line/branch/function coverage**. Reproduce:
 
 ```bash
 forge test --root contracts --match-test testFuzz_HouseEdgeConverges -vv
 forge coverage --root contracts --report summary
 ```
 
-### 5. Verifiable live on Etherscan
+### 5. Honest disclosure: demo bet sizes are sub-economic
 
-The `houseBankroll` storage variable is `public` — anyone can query it at any time. Combined with `BetSettled` events, you can independently audit the casino's PnL:
-
-```
-total_house_pnl = Σ (stake_when_loss − (payout − stake)_when_win)
-                ≈ total_wagered × 0.01
-```
-
-The first real bet on this contract (`requestId 0x8fb8...c13b`) was a player win, which **reduced** the bankroll by exactly `payout − stake = 0.0002 − 0.0001 = 0.0001 ETH` — matching the math. [View the BetSettled tx on Etherscan ↗](https://sepolia.etherscan.io/tx/0x0862522b85ff3402881ff07e331e1a671d8d32ecdd9d89f4fca0689c63b1bbb5)
-
----
-
-## What works
-
-- ✅ **Wallet connect** via RainbowKit (MetaMask + WalletConnect + Coinbase Wallet)
-- ✅ **Deposit / withdraw** test ETH against an internal balance held by the casino contract
-- ✅ **Place a bet** with configurable win-chance slider (2% – 98%), with live multiplier + payout-on-win readouts
-- ✅ **Provably fair randomness** via Chainlink VRF v2.5 (`request → fulfillment → settle` flow visible on-chain)
-- ✅ **Live event feed** of all bets via WebSocket subscription (Alchemy WSS) — updates in real time
-- ✅ **Personal bet history** filtered by indexed player address
-- ✅ **`/proof/[requestId]`** breakdown page with all 4 steps + Etherscan links
-- ✅ **House edge baked into the math** (see Casino Economics above)
-- ✅ **VRF outage fallback**: `rescueStaleBet(requestId)` allows any user to recover their stake 24h after a stalled request
-- ✅ **Network mismatch banner** with one-click "Switch to Sepolia"
-- ✅ **404 + error boundary** with branded copy
-- ✅ **Pixel-perfect design** lifted from `claude-design-layouts/` (Cinzel display + gold-on-warm-black palette)
-
-## What doesn't (and why)
-
-- **No mainnet deploy** — contest is testnet-only by rules
-- **No mobile-deep-link WalletConnect** — desktop-focused for the time budget
-- **No i18n** — English only
-- **No backend / database** — all state on-chain, all data read directly via wagmi
-- **No commit-reveal RNG fallback** — relying solely on Chainlink VRF + `rescueStaleBet` (24h timeout) was a deliberate choice to keep the contract surface minimal in 48h
-- **No "auto-bet" mode** — scoped as stretch goal, deprioritized for visual polish
-
-## Why Ethereum (and not Solana)
-
-I considered Solana Devnet seriously. For a real-money casino product, sub-second blocks and sub-cent fees would be attractive. I went with Ethereum Sepolia anyway because:
-
-1. **48-hour Rust learning-curve risk** — Anchor + IDL + `cargo-build-sbf` can eat hours on unfamiliar tooling errors. EVM is well-trodden ground.
-2. **Casino reference patterns are far more abundant on EVM** — needed VRF integration patterns to ship fast.
-3. **Solana's network outage history** would be a real concern for a real-money casino product.
-
-For a mainnet ship I'd seriously look at Base L2 — same EVM tooling but with 2s blocks and ~$0.001 fees. Sepolia's 12s blocks are workable on testnet because the wait becomes a trust-signal UI element ("we wait because Chainlink VRF is real, and that's the point").
-
-## Economics & Gas: why this only works on L2 in production
-
-**Current state**: this demo runs on **Ethereum Sepolia testnet**, where gas is effectively **free** — users pay in worthless test ETH that anyone can grab from a faucet in 30 seconds. That's why the min bet here is `0.0001 ETH` ($0.30 at $3000/ETH-equivalent) — we're optimizing for "playable in a 5-minute demo," not "economically sensible at real prices."
-
-For a real-money production ship, **the choice of network completely determines whether the product is viable**. Below is the honest math.
-
-### The viability constraint
-
-The user pays gas **from their own wallet** for every `placeBet()` call (settlement is paid by the casino's Chainlink VRF subscription, so that one is invisible to the player). For the product to make sense, gas needs to be **a small fraction of the bet** — say, < 5%. Otherwise the user is paying more in fees than the casino's 1% edge takes from them, and they'd be playing at negative expected value vs. just holding ETH.
-
-`placeBet()` is a moderately heavy transaction: ~150,000 gas (storage writes for the `Roll` struct, VRF request, event emission).
-
-### Network-by-network cost of one `placeBet()`
-
-Assuming `$3000/ETH` and typical 2026 gas conditions:
-
-| Network | Gas price | Cost per `placeBet()` | Min sensible bet | Verdict |
-|---|---|---|---|---|
-| **Ethereum L1 mainnet** | ~30 gwei | **~$13.50** | $1,350 (so gas = 1%) | ❌ Dead on arrival |
-| **Sepolia (current)** | n/a — testnet | **$0.00** | $0.0001 ETH faucet | ✅ Demo only |
-| **Base L2** | ~0.005 gwei | **~$0.003** | $0.30 | ✅ **Best fit** |
-| **Arbitrum One** | ~0.01 gwei | **~$0.005** | $0.50 | ✅ Works |
-| **Optimism** | ~0.001 gwei | **~$0.003** | $0.30 | ✅ Works |
-| **Polygon PoS** | ~30 gwei (MATIC, $0.50) | **~$0.001** | $0.10 | ✅ Cheapest, but Polygon ≠ ETH UX |
-
-On **Ethereum L1 mainnet**, a casino at our parameters is economically impossible — a $0.30 bet would carry $13.50 in gas, a **45× fee on stake**. Even a $30 bet pays 45% in gas. **Nobody plays this.** This is precisely why every real crypto casino you'll see (Polymarket, Rollbit, Stake on-chain, Shuffle) runs on **L2 or a sidechain**, never directly on L1.
-
-### Recommended production target: **Base**
-
-If we were shipping this for real today, I'd pick **Base (Coinbase L2)**:
-
-1. **~$0.003 per bet** — gas is ~1% of a $0.30 minimum bet, well under the casino's 1% house edge — economics work.
-2. **2-second blocks** — the bet → reveal flow feels instant instead of a 12s Sepolia wait.
-3. **Chainlink VRF v2.5 is live on Base mainnet** with full LINK + native-ETH payment support — we don't have to rewrite the randomness layer.
-4. **Coinbase user funnel** — Coinbase Wallet is integrated end-to-end, and Base has the largest L2 active-user base. Easiest user onramp.
-5. **EVM-identical** — our `CasinoDice.sol` ports **1:1** with zero changes. Only the frontend config differs.
-
-### What changes when porting to Base
-
-Almost nothing on the contract side. The diff is essentially three constants:
-
-```diff
-// foundry.toml deploy script
-- vrfCoordinator = 0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B  // Sepolia v2.5
-+ vrfCoordinator = 0xd5D517aBE5cF79B7e95eC98dB0f0277788aFF634  // Base mainnet v2.5
-
-// lib/wagmi.ts
-- chain: sepolia
-+ chain: base
-- rpcUrl: alchemy/sepolia
-+ rpcUrl: alchemy/base-mainnet
-
-// New VRF subscription
-+ Fund a Base mainnet VRF subscription with LINK (or use native ETH payment)
-```
-
-Plus a fresh deploy + verify on Base. **Total porting time: ~1 hour**, dominated by funding the new VRF subscription, not code.
-
-### Why this section exists
-
-Picking the wrong network kills the product silently — the contract works, the UI works, but **nobody can afford to play**. The "is this viable on mainnet?" question is the single most important thing to answer before shipping a casino, and the answer is "only on L2." Sepolia gives us the freedom to demo and iterate at zero cost; the path to production is a one-line config change to Base.
-
-## Hardest unknown I figured out
-
-**Chainlink VRF v2.5 vs v2 on Sepolia.** Most public tutorials and examples are still on VRF v2, but v2.5 is the current production version with different coordinator addresses, different key hash, and a fundamentally different consumer-contract API (`VRFConsumerBaseV2Plus`, `RandomWordsRequest` struct with `extraArgs` for native vs LINK payment).
-
-I burned ~2 hours debugging a "request not paid" error before realizing my consumer contract was importing v2 interfaces against a v2.5 coordinator. Fix: pin everything to v2.5 — both the package version (`chainlink-brownie-contracts@1.3.0`) and the Sepolia coordinator address (`0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B`).
-
-A second hidden problem: Sepolia's LINK/ETH price feed is so depressed that the coordinator's *estimated* LINK cost for a 200k-gas callback can run to **40+ LINK** during gas spikes — completely disconnected from mainnet (~2 LINK for the same call). The pending request stayed unfulfilled for ~30 minutes until either gas dropped or I topped up the subscription. Documented as a known testnet quirk.
-
-## What I'd build next
-
-1. **Multiple games** — Plinko and Slots both deserve their own VRF wiring. Slots is paytable-heavy; Plinko is animation-heavy. Either fits the existing event/feed infrastructure with minimal contract changes.
-2. **L2 deploy (Base)** — port the contract unchanged; only RPC + chainId + VRF coordinator address change. ~80% UX improvement for users.
-3. **Auto-bet with martingale / Fibonacci strategies** — UI surface for "play 100 rolls, double on loss", with proper stop-loss and stop-win.
-4. **Subgraph** for historical aggregates — high rollers, win rate leaderboards, ROI charts.
-5. **NFT-gated VIP tier** — own an ERC-721, get a reduced (but non-zero) house edge.
-6. **Native ETH VRF payment** — currently uses LINK; v2.5 supports native ETH which sidesteps the LINK/ETH price-feed quirk above.
-
-## How I used AI tools
-
-I leaned heavily on Claude (Anthropic) as my primary copilot through every layer of the build:
-
-- **Spec + Plan**: Claude authored `TASK.md` (functional spec) and `DESIGN.md` (visual system) collaboratively over ~2h of brainstorming, then produced a detailed 27-task implementation plan in `docs/superpowers/plans/`. This was the most valuable use — having a concrete, code-level plan meant the execution phase was almost purely mechanical.
-- **Smart contract**: full TDD implementation by a dispatched Claude subagent. 29 tests + fuzz test, 100% line / branch / function coverage on `CasinoDice.sol`. Took one subagent dispatch and ~10 minutes wall time.
-- **Frontend foundation + atoms**: a second subagent wrote globals.css tokens, wagmi/RainbowKit providers, format/multiplier utilities with vitest tests, ABI export, and the contract hooks. ~10 min.
-- **UI components (first pass, Tailwind)**: a third subagent built the initial Tailwind-translated dice page (BetForm, BetButton, DiceCanvas, Live Feed, modals). ~10 min.
-- **Pixel-perfect rewrite**: when the Tailwind translation diverged from the design, I dispatched two more subagents in parallel to rewrite `/dice` and `/about` using the raw HTML/CSS class names from `claude-design-layouts/`. ~10 min each.
-- **Design (separately)**: the visual mockups in `claude-design-layouts/` were generated via Claude Design from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, game tiles, dice canvas, etc.
-
-**What worked best**: dispatching subagents *per coherent task* (entire contract, entire frontend foundation, etc.) rather than a single massive prompt. The subagent gets a fresh context window, the parent reviews the diff between tasks, errors surface early.
-
-**What didn't work well**: my initial attempt to mechanically translate the design's HTML into Tailwind utilities. The translation lost design fidelity at every step (wrong button sizes, container overflow, mismatched fonts). Dropping back to the raw design CSS class names from `styles.css` was the right call — let the designer's CSS work as intended, only React-ify the dynamic parts.
-
-**Concrete infrastructure that helped**:
-- Detailed `TASK.md` + `DESIGN.md` + `plan.md` upfront — the subagents could read these for context without me re-explaining
-- Two-phase rewrite strategy: first ship something functional, then iterate against the design
-- Vercel + GitHub auto-deploy — every push from local triggered a fresh production build, no manual deploy step
+The 1% edge is real in the bytecode. **But at our demo `MIN_BET = 0.0001 ETH`**, per-bet revenue (~0.000001 ETH) is below the per-callback VRF cost. This is **a deliberate UX choice for the contest** — judges can faucet a tiny amount of Sepolia ETH and actually play. The contract's math is independent of MIN_BET; tuning it to the per-network break-even (see [migration table](#-production-migration-sepolia--base-l2)) is what makes it profitable in production. `houseBankroll` correctly reflects 1% edge in ETH terms — LINK subscription costs are tracked separately by Chainlink.
 
 ## Local development
 
 ```bash
-# Install
 pnpm install
-
-# Env (copy from .env.example and fill in your own keys)
-cp .env.example .env
+cp .env.example .env                # fill in your own keys
 
 # Smart contract
-pnpm contracts:test           # forge tests (29 tests)
-pnpm contracts:coverage       # forge coverage --report summary
-pnpm contracts:deploy         # broadcast + verify on Sepolia
+pnpm contracts:test                 # forge tests (29 tests)
+pnpm contracts:coverage             # forge coverage --report summary
+pnpm contracts:deploy               # broadcast + verify on Sepolia
 
 # Frontend
-pnpm dev                      # http://localhost:3000
-pnpm test                     # vitest unit tests (18 tests)
-pnpm typecheck                # tsc --noEmit
-pnpm build                    # production build
+pnpm dev                            # http://localhost:3000
+pnpm test                           # vitest (18 tests)
+pnpm typecheck                      # tsc --noEmit
+pnpm build                          # production build
+
+# Reports
+pnpm tsx scripts/casino-report.ts   # live casino P&L + pending bets
 ```
 
 ## Stack
 
 - **Contracts**: Solidity 0.8.24, Foundry, OpenZeppelin v5.1.0, Chainlink VRF v2.5
-- **Frontend**: Next.js 15.5 (App Router), React 19, TypeScript, Tailwind v4 (`@theme` tokens) + raw design CSS, wagmi v2, viem, RainbowKit, Cinzel + Geist Sans + Geist Mono fonts
+- **Frontend**: Next.js 15.5 (App Router), React 19, TypeScript, Tailwind v4 (`@theme` tokens) + raw design CSS, wagmi v2, viem, RainbowKit, Cinzel + Geist Sans + Geist Mono
 - **Hosting**: Vercel (frontend), Sepolia (contract)
-- **RPC**: Alchemy (HTTPS + WebSocket for event subscription)
+- **RPC**: Alchemy (HTTPS + WSS) with 4-RPC viem fallback transport
 
 ## Repo layout
 
@@ -272,8 +223,9 @@ components/       Reusable React components — Nav, modals, NetworkBanner, etc.
 hooks/            wagmi hooks — useDicePhase, useCasinoBalance, useHouseBankroll, useBetEvents, useMyBets
 lib/              ABI export, format utilities, multiplier math, vitest tests
 public/assets/    Logo, hero banner, game tile artwork
-claude-design-layouts/  Original HTML/CSS design from Claude Design (source of truth for visual)
+claude-design-layouts/  Source-of-truth design from Claude Design (HTML/CSS)
 docs/             TASK.md spec, DESIGN.md visual system, implementation plan
+scripts/          casino-report.ts (P&L + pending bets reporter)
 ```
 
-See [`TASK.md`](TASK.md), [`DESIGN.md`](DESIGN.md), and the implementation plan in [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full design + execution rationale.
+See [`TASK.md`](TASK.md), [`DESIGN.md`](DESIGN.md), [`RULES.md`](RULES.md), and the implementation plan in [`docs/superpowers/plans/`](docs/superpowers/plans/) for the full design + execution rationale.
