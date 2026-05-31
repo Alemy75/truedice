@@ -525,25 +525,26 @@ img, svg { display: block; }
   --hero-fade-angle: 225deg;
 }
 
-/* Mobile artwork swap — bgs change to the mobile crop + slightly wider
-   so each palm has more breathing room and the diagonal fade is more
-   pronounced (mobile centerline is closer to the palms). */
+/* Mobile artwork swap — bgs change to the mobile crop + dim palms to
+   opacity 0.2 so the hero text reads clearly against them. Fade starts
+   higher up the diagonal so the bg covers more of each palm tile. */
 @media (max-width: 700px) {
   .hero-palm {
     background-image: url("/assets/hero-mobile.webp");
+    opacity: 0.2;
   }
   .hero-palm-left,
   .hero-palm-right {
-    width: 46%;
+    width: 44%;
   }
   .hero-palm-left::after,
   .hero-palm-right::after {
     background: linear-gradient(
       var(--hero-fade-angle, 135deg),
       transparent 0%,
-      transparent 22%,
-      rgba(5, 4, 3, 0.70) 60%,
-      var(--color-background) 88%
+      transparent 8%,
+      rgba(5, 4, 3, 0.75) 38%,
+      var(--color-background) 70%
     );
   }
 }
@@ -739,7 +740,14 @@ img, svg { display: block; }
 
 /* ---- Layout ---- */
 .play { padding: 40px 0 64px; padding-top: 116px; }
-.play-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 28px; align-items: stretch; }
+.play-grid {
+  display: grid;
+  /* minmax(0, …) so a too-wide canvas can't push the form column out
+     of view at intermediate widths. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
 
 /* ---- Dice canvas ---- */
 .canvas-card {
@@ -785,12 +793,38 @@ img, svg { display: block; }
   opacity: 1;
   filter: none;
 }
+/* Two halves of the dice-frame artwork, each pinned to a side of the
+   canvas-card. Same trick as .hero-palm — background-position crops the
+   image to the relevant edge. */
+.dice-palm {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  z-index: 2;
+  pointer-events: none;
+  background-image: url("/assets/dice-frame.png");
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+}
+.dice-palm-left {
+  left: -2px;
+  width: 32%;
+  background-position: left center;
+}
+.dice-palm-right {
+  right: -2px;
+  width: 32%;
+  background-position: right center;
+}
+/* Legacy single-frame fallback — kept in case any external code still
+   references .dice-frame; both new and legacy paths render. */
 .dice-frame {
   position: absolute; inset: -2px; z-index: 2; pointer-events: none;
   background-image: url("/assets/dice-frame.png");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
+  display: none;
 }
 .dice-number, .dice-readout { position: relative; z-index: 4; }
 .dice-readout { display: none; }
@@ -1054,7 +1088,10 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
 .vrf-stall p { color: var(--color-foreground-muted); line-height: 1.55; }
 .vrf-stall code { font-family: var(--font-mono); color: var(--color-foreground); }
 
-@media (max-width: 1024px) {
+/* Stack on narrow desktop / tablet — bumped 1024 → 1100 because at
+   ~1030-1080 the canvas-card was visually crowding the form column
+   (palms + frame don't shrink below their image breathing room). */
+@media (max-width: 1100px) {
   .play-grid { grid-template-columns: 1fr; }
   .canvas-card { aspect-ratio: 16/11; }
   .result-track { width: 44%; max-width: 320px; bottom: 24px; }

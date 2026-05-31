@@ -265,10 +265,11 @@ export default function DicePage() {
             <div className="canvas-vignette" />
             {/* Animation layer (bottom). Always running; lifecycle keyed to phase. */}
             <BetSpinner phase={phase} />
-            {/* Static palm/dice frame above the spinner — visual signature
-                of the page. Text + result-track layer above this stay
-                at full clarity. */}
-            <div className="dice-frame" />
+            {/* Two edge-pinned palms — same source PNG, each cropped to
+                its own side. Mirrors the hero-palm pattern: no scaling
+                artifacts at intermediate viewport widths. */}
+            <div className="dice-palm dice-palm-left" aria-hidden />
+            <div className="dice-palm dice-palm-right" aria-hidden />
 
             {isIdle && (
               <div className="dice-idle">
