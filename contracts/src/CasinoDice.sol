@@ -13,8 +13,11 @@ contract CasinoDice is VRFConsumerBaseV2Plus, ReentrancyGuard {
     uint256 public constant MAX_BET_BPS_OF_BANKROLL = 100;   // 1% of bankroll
     uint64 public constant MIN_ROLL_UNDER = 200;             // 2.00%
     uint64 public constant MAX_ROLL_UNDER = 9800;            // 98.00%
-    uint32 public constant CALLBACK_GAS_LIMIT = 200_000;
-    uint16 public constant REQUEST_CONFIRMATIONS = 3;
+    uint32 public constant CALLBACK_GAS_LIMIT = 150_000;
+    // 1 confirmation on Sepolia (~12s) instead of 3 (~36s). Acceptable on
+    // testnet — reorg risk is low and stakes are play-money. For mainnet
+    // bump back to 3 for proper reorg safety.
+    uint16 public constant REQUEST_CONFIRMATIONS = 1;
     uint32 public constant NUM_WORDS = 1;
     uint256 public constant STALE_BET_TIMEOUT = 24 hours;
     uint256 public constant FEED_SIZE = 50;
@@ -26,7 +29,13 @@ contract CasinoDice is VRFConsumerBaseV2Plus, ReentrancyGuard {
     mapping(address => uint256) public balanceOf;
     uint256 public houseBankroll;
     mapping(uint256 => Roll) public rolls;
+    // Circular ring buffer of recent settled bet ids.
+    // - While length < FEED_SIZE: behaves as a linear array; head stays at 0.
+    // - Once full: writes wrap, head points to the next slot to overwrite
+    //   (which is also the OLDEST entry). Newest entry is at
+    //   (head - 1 + FEED_SIZE) % FEED_SIZE.
     uint256[] public recentRollIds;
+    uint256 public recentRollIdsHead;
 
     struct Roll {
         address player;
@@ -156,14 +165,14 @@ contract CasinoDice is VRFConsumerBaseV2Plus, ReentrancyGuard {
     }
 
     function _pushRecent(uint256 requestId) internal {
+        // O(1) ring buffer: until full, append linearly; once full, overwrite
+        // at `recentRollIdsHead` and advance head. Saves ~140k gas per VRF
+        // callback compared to the prior O(N) shift-array implementation.
         if (recentRollIds.length < FEED_SIZE) {
             recentRollIds.push(requestId);
         } else {
-            // shift-left and append (O(FEED_SIZE)); FEED_SIZE=50 is cheap on Sepolia
-            for (uint256 i = 0; i < FEED_SIZE - 1; i++) {
-                recentRollIds[i] = recentRollIds[i + 1];
-            }
-            recentRollIds[FEED_SIZE - 1] = requestId;
+            recentRollIds[recentRollIdsHead] = requestId;
+            recentRollIdsHead = (recentRollIdsHead + 1) % FEED_SIZE;
         }
     }
 
@@ -171,8 +180,38 @@ contract CasinoDice is VRFConsumerBaseV2Plus, ReentrancyGuard {
         uint256 len = recentRollIds.length;
         uint256 take = n > len ? len : n;
         list = new Roll[](take);
-        for (uint256 i = 0; i < take; i++) {
-            list[i] = rolls[recentRollIds[len - take + i]];
+        if (len < FEED_SIZE) {
+            // Linear: oldest at [0], newest at [len-1]. Return last `take`.
+            for (uint256 i = 0; i < take; i++) {
+                list[i] = rolls[recentRollIds[len - take + i]];
+            }
+        } else {
+            // Circular: head points to the oldest entry. Newest entry is at
+            // head-1 (with wraparound). For chronological order (oldest →
+            // newest), start at (head + FEED_SIZE - take) % FEED_SIZE.
+            uint256 start = (recentRollIdsHead + FEED_SIZE - take) % FEED_SIZE;
+            for (uint256 i = 0; i < take; i++) {
+                list[i] = rolls[recentRollIds[(start + i) % FEED_SIZE]];
+            }
+        }
+    }
+
+    /// @notice Returns the last `n` settled bet request ids in chronological
+    ///         order (oldest first, newest last). Mirrors getRecentRolls's
+    ///         indexing for the frontend's BetEvent[] pairing.
+    function getRecentRollIds(uint256 n) external view returns (uint256[] memory ids) {
+        uint256 len = recentRollIds.length;
+        uint256 take = n > len ? len : n;
+        ids = new uint256[](take);
+        if (len < FEED_SIZE) {
+            for (uint256 i = 0; i < take; i++) {
+                ids[i] = recentRollIds[len - take + i];
+            }
+        } else {
+            uint256 start = (recentRollIdsHead + FEED_SIZE - take) % FEED_SIZE;
+            for (uint256 i = 0; i < take; i++) {
+                ids[i] = recentRollIds[(start + i) % FEED_SIZE];
+            }
         }
     }
 

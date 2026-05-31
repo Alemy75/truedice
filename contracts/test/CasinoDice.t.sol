@@ -303,7 +303,7 @@ contract CasinoDiceVRFTest is Test {
         vm.prank(ALICE);
         casino.deposit{value: 5 ether}();
 
-        // Place + settle 52 bets to trigger feed shift-left
+        // Place + settle 52 bets to trigger ring-buffer wraparound
         for (uint256 i = 0; i < 52; i++) {
             vm.prank(ALICE);
             uint256 reqId = casino.placeBet(0.005 ether, 4950);
@@ -314,6 +314,94 @@ contract CasinoDiceVRFTest is Test {
 
         CasinoDice.Roll[] memory list = casino.getRecentRolls(100);
         assertEq(list.length, 50);
+    }
+
+    /// @dev Ring buffer must preserve chronological order after wraparound:
+    /// the 50 returned rolls should be the 50 MOST RECENT (i.e. bets #2..#51),
+    /// with oldest-first. We tag each bet's stake with a unique value so we
+    /// can verify the sequence after wraparound.
+    function test_GetRecentRolls_RingBufferChronologicalOrder() public {
+        vm.prank(ALICE);
+        casino.deposit{value: 10 ether}();
+
+        // Place + settle 53 bets. Stakes vary so we can identify each roll
+        // by its position in the list.
+        // Bet i ∈ [0..52] has stake = (0.001 + 0.0001 * i) ether
+        // After 53 bets, the buffer holds bets 3..52 (oldest first).
+        uint64 ROLL_UNDER = 4950;
+        for (uint256 i = 0; i < 53; i++) {
+            uint128 stake = uint128(0.001 ether + 0.0001 ether * i);
+            vm.prank(ALICE);
+            uint256 reqId = casino.placeBet(stake, ROLL_UNDER);
+            uint256[] memory words = new uint256[](1);
+            words[0] = i * 7;
+            coordinator.fulfillRandomWordsWithOverride(reqId, address(casino), words);
+        }
+
+        // Request all 50 — should be bets 3..52 in order
+        CasinoDice.Roll[] memory list = casino.getRecentRolls(50);
+        assertEq(list.length, 50);
+        for (uint256 i = 0; i < 50; i++) {
+            uint256 expectedBetIndex = i + 3; // first kept bet is #3
+            uint128 expectedStake = uint128(0.001 ether + 0.0001 ether * expectedBetIndex);
+            assertEq(
+                list[i].stake,
+                expectedStake,
+                "Ring buffer order mismatch: position i should hold the (i+3)-th bet"
+            );
+        }
+
+        // Request last 5 — should be bets 48..52
+        CasinoDice.Roll[] memory tail = casino.getRecentRolls(5);
+        assertEq(tail.length, 5);
+        for (uint256 i = 0; i < 5; i++) {
+            uint256 expectedBetIndex = i + 48;
+            uint128 expectedStake = uint128(0.001 ether + 0.0001 ether * expectedBetIndex);
+            assertEq(tail[i].stake, expectedStake, "Tail slice order mismatch");
+        }
+    }
+
+    /// @dev getRecentRollIds returns ids paired 1-1 with getRecentRolls. Both
+    /// must use the same chronological ordering after wraparound.
+    function test_GetRecentRollIds_PairedWithGetRecentRolls() public {
+        vm.prank(ALICE);
+        casino.deposit{value: 10 ether}();
+
+        // 55 bets → 5 wraparounds
+        for (uint256 i = 0; i < 55; i++) {
+            vm.prank(ALICE);
+            uint256 reqId = casino.placeBet(0.001 ether, 4950);
+            uint256[] memory words = new uint256[](1);
+            words[0] = i * 13;
+            coordinator.fulfillRandomWordsWithOverride(reqId, address(casino), words);
+        }
+
+        CasinoDice.Roll[] memory rolls_ = casino.getRecentRolls(50);
+        uint256[] memory ids = casino.getRecentRollIds(50);
+        assertEq(rolls_.length, 50);
+        assertEq(ids.length, 50);
+
+        // Cross-reference: rolls[ids[i]] must equal rolls_[i]
+        for (uint256 i = 0; i < 50; i++) {
+            (
+                address player,
+                uint128 stake,
+                uint64 rollUnder,
+                uint64 multiplierBps,
+                uint64 result,
+                bool won,
+                bool settled,
+                uint40 requestedAt
+            ) = casino.rolls(ids[i]);
+            assertEq(player, rolls_[i].player, "player mismatch");
+            assertEq(stake, rolls_[i].stake, "stake mismatch");
+            assertEq(rollUnder, rolls_[i].rollUnder, "rollUnder mismatch");
+            assertEq(multiplierBps, rolls_[i].multiplierBps, "multiplierBps mismatch");
+            assertEq(result, rolls_[i].result, "result mismatch");
+            assertEq(won, rolls_[i].won, "won mismatch");
+            assertEq(settled, rolls_[i].settled, "settled mismatch");
+            assertEq(requestedAt, rolls_[i].requestedAt, "requestedAt mismatch");
+        }
     }
 
     function test_Withdraw_RevertsOnTransferFailure() public {

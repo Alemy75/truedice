@@ -196,6 +196,25 @@ export const CasinoDiceAbi = [
   },
   {
     "type": "function",
+    "name": "getRecentRollIds",
+    "inputs": [
+      {
+        "name": "n",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "ids",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRecentRolls",
     "inputs": [
       {
@@ -346,6 +365,19 @@ export const CasinoDiceAbi = [
         "internalType": "uint256"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "recentRollIdsHead",
+    "inputs": [],
     "outputs": [
       {
         "name": "",

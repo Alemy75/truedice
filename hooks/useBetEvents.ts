@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useReadContract, useReadContracts, useWatchContractEvent } from "wagmi";
+import { useReadContract, useWatchContractEvent } from "wagmi";
 import { useCasinoContract } from "./useCasinoContract";
 
 export interface BetEvent {
@@ -49,24 +49,18 @@ export function useBetEvents() {
     args: [BigInt(MAX_FEED)],
   });
 
-  // Read recentRollIds[0..MAX_FEED-1] in a single multicall.
-  // allowFailure: positions beyond actual length revert — we just skip them.
-  const { data: idsData, refetch: refetchIds } = useReadContracts({
-    contracts: Array.from({ length: MAX_FEED }, (_, i) => ({
-      address: contract.address,
-      abi: contract.abi,
-      functionName: "recentRollIds",
-      args: [BigInt(i)] as const,
-    })),
-    allowFailure: true,
+  // Paired ids — same chronological ordering as getRecentRolls. Single
+  // RPC call (replaces the prior 50-element multicall on recentRollIds).
+  const { data: idsData, refetch: refetchIds } = useReadContract({
+    ...contract,
+    functionName: "getRecentRollIds",
+    args: [BigInt(MAX_FEED)],
   });
 
   const events = useMemo<BetEvent[]>(() => {
     if (!rollsData || !Array.isArray(rollsData)) return [];
     const rolls = rollsData as RawRoll[];
-    const ids = (idsData ?? [])
-      .filter((r) => r.status === "success")
-      .map((r) => r.result as bigint);
+    const ids = (idsData as readonly bigint[] | undefined) ?? [];
 
     // rolls.length and ids.length should match (both = K = recentRollIds.length).
     // Pair them by index. If they mismatch (shouldn't happen), fall back to

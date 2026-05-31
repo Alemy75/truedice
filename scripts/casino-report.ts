@@ -9,20 +9,57 @@
  * No write operations; safe to run anytime.
  */
 
-import { createPublicClient, http, formatEther } from "viem";
+import {
+  createPublicClient,
+  http,
+  fallback,
+  formatEther,
+  parseAbi,
+  parseEther,
+} from "viem";
 import { sepolia } from "viem/chains";
 import { CasinoDiceAbi } from "../lib/abi/CasinoDice";
 
-const CONTRACT = "0xAfF7cF9887b2e59D7402BEb3CDc7822e3DE8eB9A" as const;
+const CONTRACT = "0x6049702d7eb6bFE095d66c80c9FFD5b224aDF412" as const;
 const ALCHEMY_KEY = process.env.NEXT_PUBLIC_ALCHEMY_KEY || "";
 const INITIAL_BANKROLL_WEI = 50_000_000_000_000_000n; // 0.05 ETH at deploy
 
+// ---- Chainlink VRF v2.5 (Sepolia) ----
+const VRF_COORDINATOR = "0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B" as const;
+const SUB_ID_STR = process.env.VRF_SUBSCRIPTION_ID || "";
+// LINK/ETH conversion rate. Default is roughly mainnet rate ($13 LINK / $3000 ETH).
+// Override with LINK_ETH_RATE env var (decimal ETH per 1 LINK, e.g. "0.00005").
+const LINK_ETH_RATE = process.env.LINK_ETH_RATE
+  ? parseFloat(process.env.LINK_ETH_RATE)
+  : 0.000075;
+// USD per ETH for the final summary line. Override with ETH_USD env var.
+const ETH_USD = process.env.ETH_USD ? parseFloat(process.env.ETH_USD) : 3000;
+
+const VRF_ABI = parseAbi([
+  "function getSubscription(uint256 subId) view returns (uint96 balance, uint96 nativeBalance, uint64 reqCount, address subOwner, address[] consumers)",
+  "event SubscriptionFunded(uint256 indexed subId, uint256 oldBalance, uint256 newBalance)",
+  "event SubscriptionFundedWithNative(uint256 indexed subId, uint256 oldNativeBalance, uint256 newNativeBalance)",
+]);
+
+// Public Sepolia RPC tends to allow wider getLogs ranges than Alchemy free tier
+// (which caps at 10 blocks). We use it specifically for the VRF events query.
+const PUBLIC_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+
+// Multi-RPC fallback transport so a single laggy/timeout'd provider doesn't
+// kill the whole report. Alchemy first (fast when healthy), then 4 public RPCs.
+const RPC_URLS = [
+  ALCHEMY_KEY ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}` : null,
+  "https://ethereum-sepolia-rpc.publicnode.com",
+  "https://sepolia.drpc.org",
+  "https://rpc.sepolia.org",
+  "https://rpc2.sepolia.org",
+].filter((u): u is string => Boolean(u));
+
 const client = createPublicClient({
   chain: sepolia,
-  transport: http(
-    ALCHEMY_KEY
-      ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
-      : "https://ethereum-sepolia-rpc.publicnode.com",
+  transport: fallback(
+    RPC_URLS.map((url) => http(url, { timeout: 8_000, retryCount: 1 })),
+    { rank: false, retryCount: 0 },
   ),
 });
 
@@ -247,9 +284,161 @@ async function main() {
     console.log("");
   }
 
+  // ============================================================
+  // Real profit including VRF (LINK) costs
+  // ============================================================
+  await reportRealProfit(bankroll);
+
   console.log("════════════════════════════════════════════");
   console.log(`  Etherscan: https://sepolia.etherscan.io/address/${CONTRACT}`);
   console.log("════════════════════════════════════════════\n");
+}
+
+/**
+ * Compute and print net casino profit after subtracting LINK spent on VRF
+ * callbacks. LINK spent = (total funded into subscription) − (current LINK
+ * balance). Total funded is recovered by summing SubscriptionFunded events
+ * on the VRF coordinator for our subId.
+ *
+ * Skips gracefully if VRF_SUBSCRIPTION_ID env is missing.
+ */
+async function reportRealProfit(bankroll: bigint) {
+  console.log("💎 Real profit (incl. VRF costs)");
+
+  if (!SUB_ID_STR) {
+    console.log("   (skipped — set VRF_SUBSCRIPTION_ID env var to see this)\n");
+    return;
+  }
+
+  const subId = BigInt(SUB_ID_STR);
+  // Reuse the main fallback client — handles RPC flakiness for VRF queries too.
+  const publicClient = client;
+  void PUBLIC_RPC; // kept as documentation that public RPCs allow wider getLogs
+
+  // Current subscription state — LINK + native balance + request count
+  let currentLink = 0n;
+  let currentNative = 0n;
+  let reqCount = 0n;
+  try {
+    const sub = (await publicClient.readContract({
+      address: VRF_COORDINATOR,
+      abi: VRF_ABI,
+      functionName: "getSubscription",
+      args: [subId],
+    })) as readonly [bigint, bigint, bigint, `0x${string}`, readonly `0x${string}`[]];
+    currentLink = sub[0];
+    currentNative = sub[1];
+    reqCount = sub[2];
+  } catch (e) {
+    console.log("   ⚠ Failed to read VRF subscription state:", (e as Error).message);
+    console.log("");
+    return;
+  }
+
+  // Sum all SubscriptionFunded events for our subId, in 10k-block windows
+  // starting from a generous lookback. Public RPCs allow wider ranges than
+  // Alchemy free tier.
+  const latest = await publicClient.getBlockNumber();
+  const LOOKBACK = 200_000n; // ~28 days on Sepolia (12s blocks)
+  const WINDOW = 10_000n;
+  const startBlock = latest > LOOKBACK ? latest - LOOKBACK : 0n;
+  let totalFundedLink = 0n;
+  let totalFundedNative = 0n;
+  let scannedOk = true;
+  for (let from = startBlock; from <= latest; from += WINDOW) {
+    const to = from + WINDOW - 1n > latest ? latest : from + WINDOW - 1n;
+    try {
+      const linkLogs = await publicClient.getContractEvents({
+        address: VRF_COORDINATOR,
+        abi: VRF_ABI,
+        eventName: "SubscriptionFunded",
+        args: { subId },
+        fromBlock: from,
+        toBlock: to,
+      });
+      for (const log of linkLogs) {
+        const { oldBalance, newBalance } = log.args as {
+          oldBalance: bigint;
+          newBalance: bigint;
+        };
+        totalFundedLink += newBalance - oldBalance;
+      }
+      const nativeLogs = await publicClient.getContractEvents({
+        address: VRF_COORDINATOR,
+        abi: VRF_ABI,
+        eventName: "SubscriptionFundedWithNative",
+        args: { subId },
+        fromBlock: from,
+        toBlock: to,
+      });
+      for (const log of nativeLogs) {
+        const { oldNativeBalance, newNativeBalance } = log.args as {
+          oldNativeBalance: bigint;
+          newNativeBalance: bigint;
+        };
+        totalFundedNative += newNativeBalance - oldNativeBalance;
+      }
+    } catch {
+      scannedOk = false;
+      // continue — partial data is better than no data
+    }
+  }
+
+  // LINK spent = funded - current. If scan was incomplete, fundedLink might
+  // be less than current — in that case clamp to 0 and warn.
+  let spentLink = totalFundedLink - currentLink;
+  if (spentLink < 0n) {
+    spentLink = 0n;
+    scannedOk = false;
+  }
+  let spentNative = totalFundedNative - currentNative;
+  if (spentNative < 0n) spentNative = 0n;
+
+  // Convert LINK to ETH equivalent. LINK_ETH_RATE is a float (ETH per LINK),
+  // so we multiply via gwei to retain enough precision.
+  const linkAsEthFloat = Number(formatEther(spentLink)) * LINK_ETH_RATE;
+  const linkAsEthWei = parseEther(linkAsEthFloat.toFixed(18));
+
+  const ethGrossPnL = bankroll - INITIAL_BANKROLL_WEI;
+  const totalCostsWei = linkAsEthWei + spentNative;
+  const netPnL = ethGrossPnL - totalCostsWei;
+
+  const reqCountStr = reqCount.toString();
+  const linkHuman = formatEther(spentLink);
+  const grossHuman = `${ethGrossPnL >= 0n ? "+" : ""}${formatEther(ethGrossPnL)}`;
+  const costHuman = `−${formatEther(totalCostsWei)}`;
+  const netHuman = `${netPnL >= 0n ? "+" : ""}${formatEther(netPnL)}`;
+  const netUsd = (Number(formatEther(netPnL < 0n ? -netPnL : netPnL)) * ETH_USD).toFixed(2);
+
+  console.log(`   Sub ID:                ${SUB_ID_STR.slice(0, 14)}…`);
+  console.log(`   VRF requests served:   ${reqCountStr}`);
+  console.log(`   LINK funded (scanned): ${formatEther(totalFundedLink).padStart(12)} LINK`);
+  console.log(`   LINK current balance:  ${formatEther(currentLink).padStart(12)} LINK`);
+  console.log(`   LINK spent on VRF:     ${linkHuman.padStart(12)} LINK`);
+  if (spentNative > 0n) {
+    console.log(`   Native ETH spent:      ${formatEther(spentNative).padStart(12)} ETH  (native VRF payment)`);
+  }
+  console.log("");
+  console.log(`   ETH gross profit:      ${grossHuman.padStart(13)} ETH  (houseBankroll − initial)`);
+  console.log(`   VRF cost in ETH:       ${costHuman.padStart(13)} ETH  (LINK × ${LINK_ETH_RATE} ETH/LINK)`);
+  console.log(`   ─────────────────────────────────────────────`);
+  console.log(`   NET PROFIT:            ${netHuman.padStart(13)} ETH  (${netPnL >= 0n ? "+" : "−"}$${netUsd} at $${ETH_USD}/ETH)`);
+  if (!scannedOk) {
+    console.log(
+      `   ⚠  Scan covered last ${LOOKBACK} blocks only. If subscription was`,
+    );
+    console.log(
+      `      funded earlier, real LINK-spent may be higher than reported.`,
+    );
+    console.log(
+      `      Override: set VRF_LINK_FUNDED=<wei> to bypass the events scan.`,
+    );
+  }
+  console.log(
+    `   Tip: tune LINK_ETH_RATE (default 0.000075) and ETH_USD (default 3000)`,
+  );
+  console.log(`        env vars to match current market prices.`);
+  console.log("");
 }
 
 main().catch((e) => {

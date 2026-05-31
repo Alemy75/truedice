@@ -12,7 +12,7 @@ A verifiable on-chain dice casino on Ethereum Sepolia. Every roll is decided by 
 |---|---|
 | 🌐 **Live demo** | https://truedice.vercel.app |
 | 💻 **GitHub repo** | https://github.com/Alemy75/truedice |
-| 📜 **Smart contract** (verified) | [`0xAfF7cF9887...3DE8eB9A` on Sepolia Etherscan](https://sepolia.etherscan.io/address/0xAfF7cF9887b2e59D7402BEb3CDc7822e3DE8eB9A) |
+| 📜 **Smart contract** (verified) | [`0xAfF7cF9887...3DE8eB9A` on Sepolia Etherscan](https://sepolia.etherscan.io/address/0x6049702d7eb6bFE095d66c80c9FFD5b224aDF412) |
 | 📄 **Full README** | https://github.com/Alemy75/truedice/blob/main/README.md |
 | 🎥 **Loom walkthrough (5 min)** | **TBD — to be recorded and added** |
 
@@ -135,7 +135,7 @@ I leaned heavily on **Claude (Anthropic)** as primary copilot through every laye
 ### What worked best
 
 - **Spec + Plan phase (~2h):** Claude co-authored `TASK.md` (functional spec) and `DESIGN.md` (visual system) collaboratively, then produced a detailed **27-task implementation plan** in `docs/superpowers/plans/`. The single most valuable use — execution after that was almost mechanical.
-- **Smart contract (subagent dispatch, ~10 min):** full TDD by a Claude subagent. 29 tests + fuzz test, **100% line/branch/function coverage** on `CasinoDice.sol`. The subagent got a clean context window and shipped a verified-on-Etherscan contract on first try.
+- **Smart contract (subagent dispatch, ~10 min):** full TDD by a Claude subagent. 31 tests + fuzz test, **100% line/branch/function coverage** on `CasinoDice.sol`. The subagent got a clean context window and shipped a verified-on-Etherscan contract on first try.
 - **Frontend foundation (subagent, ~10 min):** globals.css design tokens, wagmi/RainbowKit providers, format utilities + vitest tests, ABI export, contract hooks.
 - **Design system:** visual mockups in `claude-design-layouts/` generated via **Claude Design** from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc.
 - **Pixel-perfect rewrite (parallel subagents, ~10 min each):** when the initial Tailwind translation diverged from the design, I dispatched two subagents to rewrite `/dice` + `/about` using raw design CSS class names from the Claude Design mockups.
