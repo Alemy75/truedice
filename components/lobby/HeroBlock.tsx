@@ -4,18 +4,28 @@ import { Button } from "@/components/ui/Button";
 export function HeroBlock() {
   return (
     <header className="relative min-h-screen flex items-center justify-center text-center overflow-hidden pt-[76px] px-6">
-      {/* Subtle gradient backdrop — text-only hero (no external image dependency) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0"
-        style={{
-          background: [
-            "radial-gradient(ellipse 60% 50% at 50% 40%, rgba(212,175,55,0.10) 0%, transparent 60%)",
-            "radial-gradient(ellipse 80% 60% at 50% 100%, rgba(5,4,3,0.95) 0%, transparent 70%)",
-            "linear-gradient(180deg, rgba(5,4,3,0.34) 0%, transparent 18%)",
-          ].join(", "),
-        }}
-      />
+      {/* Full-bleed hero banner — responsive (mobile/desktop) */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+        <picture>
+          <source media="(max-width: 700px)" srcSet="/assets/hero-mobile.webp" />
+          <img
+            src="/assets/hero-desktop.webp"
+            alt=""
+            className="w-full h-full object-cover object-center"
+          />
+        </picture>
+        {/* Darkening overlay — keeps gold palms vivid but text legible */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: [
+              "radial-gradient(ellipse 54% 50% at 50% 48%, rgba(5,4,3,0.66) 0%, rgba(5,4,3,0.30) 56%, transparent 80%)",
+              "linear-gradient(0deg, var(--color-background) 0%, transparent 24%)",
+              "linear-gradient(180deg, rgba(5,4,3,0.34) 0%, transparent 18%)",
+            ].join(", "),
+          }}
+        />
+      </div>
       <div className="relative z-10 max-w-[640px] mx-auto">
         <div className="font-mono text-xs uppercase tracking-[0.2em] text-foreground-subtle mb-7">
           On-chain · Chainlink VRF · Ethereum Sepolia

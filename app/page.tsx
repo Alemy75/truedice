@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { TopBar } from "@/components/layout/TopBar";
 import { HeroBlock } from "@/components/lobby/HeroBlock";
 import { StatsBar } from "@/components/lobby/StatsBar";
@@ -35,11 +36,12 @@ export default function Page() {
               description="Chainlink VRF"
               href="/dice"
               state="live"
+              image="/assets/games/dice.png"
             />
-            <GameTile name="Slots" state="soon" />
-            <GameTile name="Plinko" state="soon" />
-            <GameTile name="Roulette" state="soon" />
-            <GameTile name="Coin Flip" state="soon" />
+            <GameTile name="Slots" state="soon" image="/assets/games/slots.png" />
+            <GameTile name="Plinko" state="soon" image="/assets/games/plinko.png" />
+            <GameTile name="Roulette" state="soon" image="/assets/games/roulette.png" />
+            <GameTile name="Coin Flip" state="soon" image="/assets/games/coinflip.png" />
           </div>
         </section>
 
@@ -52,9 +54,15 @@ export default function Page() {
           <div className="max-w-[1280px] mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_1fr] gap-10">
               <div>
-                <div className="font-mono font-semibold uppercase tracking-[0.18em] text-primary text-base">
-                  True&nbsp;Dice
-                </div>
+                <Link href="/" aria-label="True Dice" className="inline-flex">
+                  <Image
+                    src="/assets/logo.png"
+                    alt="True Dice"
+                    width={120}
+                    height={26}
+                    className="h-[26px] w-auto"
+                  />
+                </Link>
                 <p className="text-foreground-muted text-sm mt-3.5 max-w-[280px]">
                   Provably fair, on-chain dice. No house secrets.
                 </p>
@@ -83,7 +91,7 @@ export default function Page() {
                 <div className="eyebrow mb-3">Resources</div>
                 <div className="flex flex-col gap-3 md:items-end">
                   <a
-                    href="https://github.com/"
+                    href="https://github.com/Alemy75/truedice"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-foreground-muted hover:text-primary transition-colors whitespace-nowrap"

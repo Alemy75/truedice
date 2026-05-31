@@ -6,9 +6,10 @@ interface GameTileProps {
   description?: string;
   href?: string;
   state: "live" | "soon";
+  image?: string; // path under /public, e.g. "/assets/games/dice.png"
 }
 
-export function GameTile({ name, description, href, state }: GameTileProps) {
+export function GameTile({ name, description, href, state, image }: GameTileProps) {
   const isLive = state === "live";
   const body = (
     <div
@@ -20,7 +21,19 @@ export function GameTile({ name, description, href, state }: GameTileProps) {
           : "border-primary/40 cursor-not-allowed",
       )}
     >
-      {/* Bottom scrim to keep text readable against any future bg image */}
+      {/* Background image */}
+      {image && (
+        <img
+          src={image}
+          alt=""
+          aria-hidden
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover z-0",
+            !isLive && "grayscale opacity-[0.38]",
+          )}
+        />
+      )}
+      {/* Scrim to keep text readable against image */}
       <span
         aria-hidden
         className="absolute inset-0 z-0 pointer-events-none"
