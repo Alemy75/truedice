@@ -9,6 +9,16 @@ import { DepositModal } from "@/components/modals/DepositModal";
 import { WithdrawModal } from "@/components/modals/WithdrawModal";
 import { cn } from "@/lib/cn";
 
+/**
+ * "In Casino" balance pill in the nav. Click to open a dropdown with
+ * Deposit / Withdraw shortcuts. Matches BrandedConnectButton's
+ * .menu-trigger pill style so the right-side cluster reads as one
+ * coherent unit.
+ *
+ * Responsive: on screens ≤ 640px the "IN CASINO" eyebrow label hides
+ * so the pill collapses to "<balance> ETH ⌄" — saves ~64px of width
+ * for the cluster + burger to fit alongside the logo.
+ */
 export function BalanceDropdown() {
   const { isConnected } = useAccount();
   const { data: balance } = useCasinoBalance();
@@ -29,35 +39,30 @@ export function BalanceDropdown() {
 
   return (
     <>
-      <div className="relative" ref={wrapRef}>
+      <div className="menu-wrap" ref={wrapRef}>
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             setOpen((v) => !v);
           }}
-          className="inline-flex items-center gap-2 h-10 px-3.5 rounded-md bg-surface-overlay border border-border hover:border-primary/40 transition-colors"
+          className="menu-trigger"
+          title="Funds you've deposited into the casino contract. Separate from your wallet's on-chain ETH."
         >
-          <span
-            className="text-foreground-subtle text-xs uppercase tracking-[0.1em] font-medium"
-            title="Funds you've deposited into the casino contract. Separate from your wallet's on-chain ETH."
-          >
-            In Casino
-          </span>
-          <span className="font-mono text-foreground text-sm tabular-nums">
-            {balance !== undefined ? formatEthSmart(balance as bigint) : "—"} ETH
+          <span className="menu-trigger-label">In Casino</span>
+          <span className="mono">
+            {balance !== undefined ? formatEthSmart(balance as bigint) : "—"}{" "}
+            <span className="menu-trigger-suffix">ETH</span>
           </span>
           <ChevronDown
-            className={cn(
-              "w-3.5 h-3.5 text-foreground-muted opacity-60 transition-transform duration-150",
-              open && "rotate-180",
-            )}
+            className={cn("caret", open && "open")}
+            size={12}
           />
         </button>
         {open && (
-          <div className="absolute right-0 top-full mt-2 min-w-[180px] bg-surface-elevated border border-border rounded-md shadow-[var(--shadow-card)] overflow-hidden p-1.5 z-50">
+          <div className="menu menu-dropdown">
             <button
-              className="w-full text-left px-3 py-2.5 rounded-sm text-sm text-foreground hover:bg-surface-overlay hover:text-primary transition-colors"
+              type="button"
               onClick={() => {
                 setModal("deposit");
                 setOpen(false);
@@ -66,7 +71,7 @@ export function BalanceDropdown() {
               Deposit
             </button>
             <button
-              className="w-full text-left px-3 py-2.5 rounded-sm text-sm text-foreground hover:bg-surface-overlay hover:text-primary transition-colors"
+              type="button"
               onClick={() => {
                 setModal("withdraw");
                 setOpen(false);
@@ -77,14 +82,8 @@ export function BalanceDropdown() {
           </div>
         )}
       </div>
-      <DepositModal
-        open={modal === "deposit"}
-        onClose={() => setModal(null)}
-      />
-      <WithdrawModal
-        open={modal === "withdraw"}
-        onClose={() => setModal(null)}
-      />
+      <DepositModal open={modal === "deposit"} onClose={() => setModal(null)} />
+      <WithdrawModal open={modal === "withdraw"} onClose={() => setModal(null)} />
     </>
   );
 }
