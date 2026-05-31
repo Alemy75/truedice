@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
+import { EnterCasinoButton } from "@/components/wallet/EnterCasinoButton";
 import { useBetEvents } from "@/hooks/useBetEvents";
 import { formatEthSmart, formatRelativeTime, truncateAddress } from "@/lib/format";
 
@@ -88,7 +89,9 @@ export default function LobbyPage() {
               Verify any outcome on Etherscan in under a minute.
             </p>
             <div className="hero-cta">
-              <Link href="/dice" className="btn btn-primary btn-xl">Enter Casino</Link>
+              <EnterCasinoButton className="btn btn-primary btn-xl">
+                Enter Casino
+              </EnterCasinoButton>
               <Link href="/about" className="btn btn-ghost btn-xl">How it works</Link>
             </div>
           </div>

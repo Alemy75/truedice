@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { parseEther } from "viem";
 import confetti from "canvas-confetti";
 import { Nav } from "@/components/layout/Nav";
@@ -339,10 +340,22 @@ export default function DicePage() {
               <div className="eyebrow">Wallet required</div>
               <p
                 className="text-muted"
-                style={{ fontSize: 15, maxWidth: 240 }}
+                style={{ fontSize: 15, maxWidth: 280 }}
               >
                 Connect a wallet to place a bet. Connecting is free.
               </p>
+              <ConnectButton.Custom>
+                {({ openConnectModal, mounted }) => (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg"
+                    disabled={!mounted}
+                    onClick={openConnectModal}
+                  >
+                    Connect Wallet
+                  </button>
+                )}
+              </ConnectButton.Custom>
             </div>
 
             {/* Win Chance */}
