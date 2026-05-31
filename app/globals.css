@@ -587,6 +587,33 @@ img, svg { display: block; }
   .stats-grid { grid-template-columns: 1fr; gap: 0; }
   .stat { padding: 22px 0; }
   .stat + .stat { border-left: 0; border-top: 1px solid var(--color-border-subtle); }
+
+  /* Hero banner on phones: keep the top of the artwork visible, hide
+     the messy bottom under a strong fade to background. */
+  .hero-banner img {
+    object-fit: contain;
+    object-position: center top;
+  }
+  .hero-banner::after {
+    background:
+      /* Heavier bottom fade — hides the lower half of the contained image */
+      linear-gradient(0deg, var(--color-background) 0%, var(--color-background) 32%, transparent 62%),
+      radial-gradient(ellipse 70% 50% at 50% 35%, rgba(5,4,3,0.55) 0%, rgba(5,4,3,0.20) 60%, transparent 85%),
+      linear-gradient(180deg, rgba(5,4,3,0.30) 0%, transparent 20%);
+  }
+
+  /* Eyebrow: tighter letter-spacing + slightly smaller font + allow natural
+     wrap onto 2-3 lines so "ON-CHAIN · CHAINLINK VRF · ETHEREUM SEPOLIA"
+     fits gracefully on narrow viewports. */
+  .hero-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    line-height: 1.55;
+    text-wrap: balance;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* ============================================================

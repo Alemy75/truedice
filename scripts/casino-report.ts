@@ -57,7 +57,68 @@ async function main() {
     `   House P&L:         ${(housePnL >= 0n ? "+" : "")}${formatEther(housePnL).padStart(12)} ETH  ← realized casino earnings\n`,
   );
 
-  // Pull all rolls + their request IDs
+  // Scan recent blocks (10-block chunks) for BetPlaced events — find any
+  // requestIds that exist but are NOT in recentRollIds (i.e. never settled).
+  console.log("🔎 Scanning last 2000 blocks for pending bets...");
+  const latest = await client.getBlockNumber();
+  const SCAN_DEPTH = 2000n;
+  const CHUNK = 10n;
+  const seenRequestIds = new Set<string>();
+  for (let from = latest - SCAN_DEPTH; from <= latest; from += CHUNK) {
+    const to = from + CHUNK - 1n > latest ? latest : from + CHUNK - 1n;
+    try {
+      const logs = await client.getContractEvents({
+        address: CONTRACT,
+        abi: CasinoDiceAbi,
+        eventName: "BetPlaced",
+        fromBlock: from,
+        toBlock: to,
+      });
+      for (const log of logs) {
+        const id = (log.args as { requestId?: bigint }).requestId;
+        if (id !== undefined) seenRequestIds.add(id.toString());
+      }
+    } catch {
+      // skip chunks that fail (rate limit etc.)
+    }
+  }
+
+  // For each requestId found in logs, look up the current Roll state from
+  // the contract — pending = player set but settled=false.
+  const pendingNotInBuffer: { id: bigint; roll: Roll }[] = [];
+  for (const idStr of seenRequestIds) {
+    const id = BigInt(idStr);
+    try {
+      const tuple = (await client.readContract({
+        address: CONTRACT,
+        abi: CasinoDiceAbi,
+        functionName: "rolls",
+        args: [id],
+      })) as unknown as readonly [
+        `0x${string}`,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        boolean,
+        boolean,
+        number,
+      ];
+      const [player, stake, rollUnder, multiplierBps, result, won, settled, requestedAt] = tuple;
+      if (player === "0x0000000000000000000000000000000000000000") continue;
+      if (!settled) {
+        pendingNotInBuffer.push({
+          id,
+          roll: { player, stake, rollUnder, multiplierBps, result, won, settled, requestedAt },
+        });
+      }
+    } catch {
+      // skip
+    }
+  }
+  console.log(`  → scanned ${seenRequestIds.size} BetPlaced events, ${pendingNotInBuffer.length} still unsettled\n`);
+
+  // Pull all rolls + their request IDs (settled ring buffer)
   const rolls = (await client.readContract({
     address: CONTRACT,
     abi: CasinoDiceAbi,
@@ -137,17 +198,32 @@ async function main() {
   }
   console.log("");
 
-  if (pendingList.length > 0) {
-    console.log("⏳ Pending requests (never settled)");
-    for (const p of pendingList) {
+  // Combine in-buffer pending + scanned-from-logs pending (dedup by id)
+  const allPendingMap = new Map<string, { id: bigint; roll: Roll; ageMin: number }>();
+  for (const p of pendingList) allPendingMap.set(p.id.toString(), p);
+  for (const p of pendingNotInBuffer) {
+    if (!allPendingMap.has(p.id.toString())) {
+      const ageMin = Math.floor((now - p.roll.requestedAt) / 60);
+      allPendingMap.set(p.id.toString(), { id: p.id, roll: p.roll, ageMin });
+    }
+  }
+  const allPending = Array.from(allPendingMap.values()).sort((a, b) => a.ageMin - b.ageMin);
+
+  if (allPending.length > 0) {
+    console.log("⏳ Pending requests (placed but never settled)");
+    for (const p of allPending) {
       console.log(
-        `   reqId: ${p.id.toString().slice(0, 12)}…  player: ${p.roll.player.slice(0, 8)}…  stake: ${formatEther(p.roll.stake)} ETH  age: ${p.ageMin}m`,
+        `   reqId: ${p.id.toString().slice(0, 14)}…  player: ${p.roll.player.slice(0, 10)}…  stake: ${formatEther(p.roll.stake)} ETH  rollUnder: ${p.roll.rollUnder}  age: ${p.ageMin}m`,
       );
       if (p.ageMin > 60 * 24) {
-        console.log(`     ⚠ over 24h — can call rescueStaleBet(${p.id})`);
+        console.log(`     ⚠ OVER 24h — call rescueStaleBet(${p.id}) to refund stake`);
+      } else if (p.ageMin > 5) {
+        console.log(`     ⚠ stuck > 5min — check vrf.chain.link/sepolia or top up LINK`);
       }
     }
     console.log("");
+  } else {
+    console.log("⏳ Pending requests: none\n");
   }
 
   if (settledList.length > 0) {
