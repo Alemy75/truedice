@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useCasinoBalance } from "@/hooks/useBalance";
-import { formatEth } from "@/lib/format";
+import { formatEthSmart } from "@/lib/format";
 import { DepositModal } from "@/components/modals/DepositModal";
 import { WithdrawModal } from "@/components/modals/WithdrawModal";
 import { cn } from "@/lib/cn";
@@ -45,7 +45,7 @@ export function BalanceDropdown() {
             In Casino
           </span>
           <span className="font-mono text-foreground text-sm tabular-nums">
-            {balance !== undefined ? formatEth(balance as bigint) : "—"} ETH
+            {balance !== undefined ? formatEthSmart(balance as bigint) : "—"} ETH
           </span>
           <ChevronDown
             className={cn(

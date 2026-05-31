@@ -5,6 +5,29 @@ export function formatEth(wei: bigint, precision: number = 4): string {
   return v.toFixed(precision);
 }
 
+/**
+ * Adaptive formatting — picks decimal precision based on magnitude so a
+ * non-zero amount never displays as "0.0000". Caps at 8 decimals.
+ *
+ * Examples:
+ *   1.5 ETH        → "1.5000"
+ *   0.0001 ETH     → "0.0001"
+ *   0.00001 ETH    → "0.00001"
+ *   0.00000102 ETH → "0.00000102"
+ *   0              → "0.0000"
+ */
+export function formatEthSmart(wei: bigint, minPrecision = 4): string {
+  if (wei === 0n) return (0).toFixed(minPrecision);
+  const v = Number(formatUnits(wei, 18));
+  // If the value rounds to 0 at minPrecision, jump to 8 decimals so all
+  // significant digits are visible (e.g. 1.02e-6 should display as
+  // "0.00000102" not "0.0000").
+  if (Number(v.toFixed(minPrecision)) === 0) {
+    return v.toFixed(8);
+  }
+  return v.toFixed(minPrecision);
+}
+
 export function formatPercentBps(bps: number | bigint): string {
   const n = Number(bps) / 100;
   return `${n.toFixed(2)}%`;

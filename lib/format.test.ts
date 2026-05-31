@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatEth,
+  formatEthSmart,
   formatPercentBps,
   formatMultiplierBps,
   truncateAddress,
@@ -16,6 +17,33 @@ describe("formatEth", () => {
   });
   it("respects custom precision", () => {
     expect(formatEth(1_500_000_000_000_000n, 2)).toBe("0.00");
+  });
+});
+
+describe("formatEthSmart", () => {
+  it("zero is just 0.0000", () => {
+    expect(formatEthSmart(0n)).toBe("0.0000");
+  });
+  it("1 ETH at min precision", () => {
+    expect(formatEthSmart(1_000_000_000_000_000_000n)).toBe("1.0000");
+  });
+  it("0.0001 ETH (exactly at 4-decimal cusp)", () => {
+    expect(formatEthSmart(100_000_000_000_000n)).toBe("0.0001");
+  });
+  it("0.00001 ETH bumps to 8 decimals (rounds to 0 at minPrecision=4)", () => {
+    expect(formatEthSmart(10_000_000_000_000n)).toBe("0.00001000");
+  });
+  it("0.00000102 ETH bumps to 8 decimals (small net profit case)", () => {
+    expect(formatEthSmart(1_020_000_000_000n)).toBe("0.00000102");
+  });
+  it("caps at 8 decimals — sub-wei dust still rounds to 0.00000000", () => {
+    // 1 wei is below 8 decimals, so it does round to 0.00000000 — this
+    // is acceptable since casino amounts are always >> 1 wei.
+    expect(formatEthSmart(1n)).toBe("0.00000000");
+  });
+  it("smallest realistic casino profit (~1e12 wei) displays cleanly", () => {
+    // 0.0001 ETH stake × 0.0102 (1.0102x mult net) = 1.02e12 wei profit
+    expect(formatEthSmart(1_020_000_000_000n)).toBe("0.00000102");
   });
 });
 

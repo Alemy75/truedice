@@ -21,6 +21,7 @@ import {
 } from "@/lib/multiplier";
 import {
   formatEth,
+  formatEthSmart,
   formatPercentBps,
   formatMultiplierBps,
   formatRelativeTime,
@@ -150,11 +151,13 @@ export default function DicePage() {
       break;
     case "won":
       pillDot.className = "dot-gold";
-      pillText = `WON +${formatEth(phase.payout)} ETH`;
+      // Show NET profit (payout - stake), not gross. Use adaptive precision
+      // so tiny wins at near-1x multipliers don't display as "+0.0000".
+      pillText = `WON +${formatEthSmart(phase.payout - stakeWei)} ETH`;
       break;
     case "lost":
       pillDot.className = "dot-crimson";
-      pillText = `LOST -${formatEth(stakeWei)} ETH`;
+      pillText = `LOST -${formatEthSmart(stakeWei)} ETH`;
       break;
   }
 
@@ -569,7 +572,7 @@ function BetsTable({
                 }`}
               >
                 {r.settled && r.won && r.payout
-                  ? `+${formatEth(r.payout - r.stake)}`
+                  ? `+${formatEthSmart(r.payout - r.stake)}`
                   : "—"}
               </td>
               <td className="num">
