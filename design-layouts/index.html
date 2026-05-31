@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#050403">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>True Dice — Provably fair, on-chain dice</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* ---- Nav ---- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    transition: background 200ms ease-out, border-color 200ms ease-out, backdrop-filter 200ms ease-out;
+    border-bottom: 1px solid transparent;
+  }
+  .nav.scrolled {
+    background: rgba(5,4,3,0.72);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .nav-inner { display: flex; align-items: center; height: 76px; gap: 32px; }
+  .wordmark {
+    font-family: var(--font-mono); font-weight: 600; font-size: 16px;
+    text-transform: uppercase; letter-spacing: 0.18em; color: var(--color-primary);
+  }
+  .nav-links { display: flex; gap: 28px; margin: 0 auto; }
+  .nav-links a {
+    font-size: 15px; color: var(--color-foreground-muted);
+    transition: color 150ms ease-out; position: relative;
+  }
+  .nav-links a:hover { color: var(--color-primary); }
+  .nav-links a::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 1px;
+    background: var(--color-primary); transform: scaleX(0); transform-origin: left;
+    transition: transform 150ms ease-out;
+  }
+  .nav-links a:hover::after { transform: scaleX(1); }
+
+  /* ---- Hero ---- */
+  .hero {
+    position: relative;
+    min-height: calc(100vh - 76px);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    overflow: hidden;
+  }
+  /* banner image centered, full-bleed behind the content */
+  .hero-banner {
+    position: absolute; inset: 0; z-index: 0;
+    pointer-events: none;
+  }
+  .hero-banner img {
+    width: 100%; height: 100%; object-fit: cover; object-position: center center;
+  }
+  /* darken edges + center so centered text stays readable */
+  .hero-banner::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 78% 68% at 50% 50%, rgba(5,4,3,0.94) 0%, rgba(5,4,3,0.80) 45%, rgba(5,4,3,0.48) 80%),
+      linear-gradient(0deg, var(--color-background) 0%, transparent 32%),
+      linear-gradient(180deg, rgba(5,4,3,0.82) 0%, transparent 34%);
+  }
+  .hero-banner img { opacity: 0.72; }
+  .hero-inner { position: relative; z-index: 1; width: 100%; display: flex; justify-content: center; }
+  .hero-text { max-width: 640px; margin: 0 auto; }
+  .hero > * { flex-shrink: 0; }
+  .hero-eyebrow {
+    font-family: var(--font-mono); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.20em; color: var(--color-foreground-subtle); margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: clamp(30px, 4.6vw, 60px); line-height: 1.14; letter-spacing: 0.005em;
+  }
+  .hero h1 .gold { color: var(--color-primary); font-weight: 700; }
+  .hero-sub {
+    font-size: clamp(16px, 2.4vw, 20px); color: var(--color-foreground-muted);
+    max-width: 540px; margin: 28px auto 0; line-height: 1.55;
+  }
+  .hero-cta { display: flex; gap: 16px; margin-top: 40px; flex-wrap: wrap; justify-content: center; }
+
+  /* ---- Lobby block (stats + games merged) ---- */
+  .lobby-block { padding-top: 64px; padding-bottom: 88px; }
+  /* ---- Stats strip ---- */
+  .stats {
+    background: var(--color-surface); border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg); padding: 32px 0; margin-bottom: 56px;
+  }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .stat { padding: 0 32px; text-align: center; }
+  .stat + .stat { border-left: 1px solid var(--color-border-subtle); }
+  .stat-value { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4.4vw, 38px); margin-top: 10px; letter-spacing: 0.01em; white-space: nowrap; }
+
+  /* ---- Lobby ---- */
+  .section { padding-top: 96px; padding-bottom: 96px; }
+  .section-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 32px; }
+  .section-head h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(32px,5vw,40px); letter-spacing: -0.02em; }
+  .lobby-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+  .tile {
+    aspect-ratio: 1; background: var(--color-surface); border-radius: var(--radius-lg);
+    position: relative; padding: 24px; display: flex; flex-direction: column;
+    transition: box-shadow 200ms ease-out, border-color 200ms ease-out;
+    overflow: hidden;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+  }
+  .tile-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 0;
+  }
+  .tile-scrim {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(5,4,3,0.55) 0%, rgba(5,4,3,0.05) 38%, rgba(5,4,3,0.45) 72%, rgba(5,4,3,0.92) 100%);
+  }
+  .tile > .tile-badge, .tile > .tile-name, .tile > .tile-desc { position: relative; z-index: 2; }
+  .tile-active { border-color: rgba(212, 175, 55, 0.75); cursor: pointer; }
+  .tile-active:hover { box-shadow: var(--shadow-glow-primary); border-color: var(--color-primary); }
+  .tile-soon { border-color: rgba(212, 175, 55, 0.40); cursor: not-allowed; }
+  .tile-soon .tile-img { filter: grayscale(1); opacity: 0.38; }
+  .tile-soon .tile-name { color: var(--color-foreground-muted); }
+  .tile-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-sans); font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em; font-weight: 500;
+    color: var(--color-foreground-muted);
+  }
+  .tile-name {
+    font-family: var(--font-mono); font-size: clamp(18px, 1.7vw, 23px); letter-spacing: 0.02em;
+    margin-top: auto; color: var(--color-foreground); white-space: nowrap;
+  }
+  .tile-active .tile-name { color: var(--color-primary); }
+  .tile-desc { font-size: 13px; color: var(--color-foreground-muted); margin-top: 6px; min-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---- Marquee ---- */
+  .marquee-wrap {
+    background: var(--color-surface); border-top: 1px solid var(--color-border-subtle);
+    border-bottom: 1px solid var(--color-border-subtle); padding: 22px 0; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .mq-item { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; padding: 0 36px; }
+  .mq-item .addr { font-size: 14px; }
+
+  /* ---- Footer ---- */
+  .footer { padding: 72px 0 40px; border-top: 1px solid var(--color-border-subtle); }
+  .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
+  .footer-links { display: flex; flex-direction: column; gap: 12px; }
+  .footer-grid > div:nth-child(2) { text-align: center; }
+  .footer-grid > div:nth-child(2) .escan { justify-content: center; }
+  .footer-grid > div:last-child { text-align: right; }
+  .footer-grid > div:last-child .footer-links { align-items: flex-end; }
+  .footer-links a, .footer .escan { font-size: 14px; color: var(--color-foreground-muted); transition: color 150ms ease-out; white-space: nowrap; }
+  .footer-links a:hover { color: var(--color-primary); }
+  .footer-bottom {
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--color-border-subtle);
+    font-size: 13px; color: var(--color-foreground-subtle);
+  }
+
+  @media (max-width: 900px) {
+    .lobby-grid { grid-template-columns: repeat(2, 1fr); }
+    .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+  }
+  @media (max-width: 980px) {
+    .hero { min-height: calc(100vh - 76px); padding: 64px 0; }
+    .hero-banner { width: 100%; max-width: none; opacity: 0.5; }
+    .hero-banner img { object-position: 70% center; }
+    .hero-banner::after {
+      background:
+        linear-gradient(90deg, var(--color-background) 8%, rgba(5,4,3,0.55) 45%, rgba(5,4,3,0.30) 100%),
+        linear-gradient(0deg, var(--color-background) 4%, transparent 30%);
+    }
+  }
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .stats-grid { grid-template-columns: 1fr; gap: 0; }
+    .stat { padding: 22px 0; }
+    .stat + .stat { border-left: 0; border-top: 1px solid var(--color-border-subtle); }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" data-nav>
+  <div class="container nav-inner">
+    <a href="index.html" class="brand-logo" aria-label="True Dice"><img src="assets/logo.png" alt="True Dice"></a>
+    <div class="nav-links">
+      <a href="dice.html">Dice</a>
+      <a href="dice.html#feed">Live</a>
+      <a href="about.html">About</a>
+    </div>
+    <div id="nav-wallet"></div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-banner"><img src="assets/banner.png" alt="True Dice"></div>
+  <div class="container hero-inner">
+    <div class="hero-text">
+      <div class="hero-eyebrow">ON-CHAIN · CHAINLINK VRF · ETHEREUM SEPOLIA</div>
+      <h1>Provably fair dice.<br><span class="gold">No house secrets.</span></h1>
+      <p class="hero-sub">Every roll is decided by Chainlink VRF and settled in a single transaction. Verify any outcome on Etherscan in under a minute.</p>
+      <div class="hero-cta">
+        <a href="dice.html" class="btn btn-primary btn-xl">Enter Casino</a>
+        <a href="about.html" class="btn btn-ghost btn-xl">How it works</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- LOBBY (stats + games merged into one block) -->
+<main class="lobby-block container">
+  <!-- STATS -->
+  <section class="stats">
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="eyebrow">Total Wagered</div>
+        <div class="stat-value">1,247.32 ETH</div>
+      </div>
+      <div class="stat">
+        <div class="eyebrow">Bets Settled</div>
+        <div class="stat-value">82,491</div>
+      </div>
+      <div class="stat">
+        <div class="eyebrow">Biggest Win · 24h</div>
+        <div class="stat-value text-gold">+12.4 ETH</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAMES -->
+  <section class="section-head">
+    <h2>Games</h2>
+    <span class="text-muted" style="font-size:16px;white-space:nowrap">One live. More coming.</span>
+  </section>
+  <div class="lobby-grid">
+    <a href="dice.html" class="tile tile-active">
+      <img class="tile-img" src="assets/games/dice.png" alt="Dice">
+      <span class="tile-scrim"></span>
+      <span class="tile-badge"><span class="dot dot-gold dot-pulse"></span>Live</span>
+      <span class="tile-name">DICE</span>
+      <span class="tile-desc">Chainlink VRF</span>
+    </a>
+    <div class="tile tile-soon">
+      <img class="tile-img" src="assets/games/slots.png" alt="Slots">
+      <span class="tile-scrim"></span>
+      <span class="tile-badge"><span class="dot dot-silver"></span>Soon</span>
+      <span class="tile-name">SLOTS</span>
+      <span class="tile-desc"></span>
+    </div>
+    <div class="tile tile-soon">
+      <img class="tile-img" src="assets/games/plinko.png" alt="Plinko">
+      <span class="tile-scrim"></span>
+      <span class="tile-badge"><span class="dot dot-silver"></span>Soon</span>
+      <span class="tile-name">PLINKO</span>
+      <span class="tile-desc"></span>
+    </div>
+    <div class="tile tile-soon">
+      <img class="tile-img" src="assets/games/roulette.png" alt="Roulette">
+      <span class="tile-scrim"></span>
+      <span class="tile-badge"><span class="dot dot-silver"></span>Soon</span>
+      <span class="tile-name">ROULETTE</span>
+      <span class="tile-desc"></span>
+    </div>
+    <div class="tile tile-soon">
+      <img class="tile-img" src="assets/games/coinflip.png" alt="Coin Flip">
+      <span class="tile-scrim"></span>
+      <span class="tile-badge"><span class="dot dot-silver"></span>Soon</span>
+      <span class="tile-name">COIN&nbsp;FLIP</span>
+      <span class="tile-desc"></span>
+    </div>
+  </div>
+</main>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-track" id="marquee"></div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="index.html" class="brand-logo footer-logo" aria-label="True Dice"><img src="assets/logo.png" alt="True Dice"></a>
+        <p class="text-muted" style="font-size:14px;margin-top:14px;max-width:280px">Provably fair, on-chain dice. No house secrets.</p>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Contract</div>
+        <span class="addr" data-copy="0x91Ab23Ee5C7d04F8a1b9C2d3E4f5061728394aB5" data-copy-label="Contract copied"><span class="addr-text mono">0x91A...aB5</span></span>
+        <div style="margin-top:10px"><a class="escan" href="#" onclick="return false"><span class="escan-label" style="font-size:13px">View on Etherscan</span> ↗</a></div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Resources</div>
+        <div class="footer-links">
+          <a href="#" onclick="return false">GitHub ↗</a>
+          <a href="about.html">Provably Fair ↗</a>
+          <a href="about.html">About ↗</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 True Dice · A TrueLabel product</span>
+      <span style="text-align:right">Testnet only. Not available where prohibited.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+<script src="modals.js"></script>
+<script>
+/* ---- Nav wallet button reflects state ---- */
+(function () {
+  const mount = document.getElementById('nav-wallet');
+  function render() {
+    const s = TD.state;
+    if (!s.connected) {
+      mount.innerHTML = '<button class="btn btn-primary btn-md" onclick="TD.openModal(\'modal-connect\')">Connect Wallet</button>';
+    } else {
+      mount.innerHTML =
+        '<a href="dice.html" class="btn btn-secondary btn-md mono">' +
+        '<span class="dot dot-gold"></span>' + TD.fmtEth(s.balance) + ' ETH</a>';
+    }
+  }
+  render();
+  window.addEventListener('td:state', render);
+})();
+
+/* ---- Live wins marquee ---- */
+(function () {
+  const players = ['0x7a3...d2f','0x4c1...9b8','0xe92...0aa','0x18d...77c','0xbb0...341','0x9f2...e5d','0x3aa...c10','0x6d4...8f2'];
+  const games = ['Dice'];
+  const items = [];
+  for (let i = 0; i < 10; i++) {
+    const big = Math.random() > 0.78;
+    const amt = (big ? (Math.random() * 9 + 2) : (Math.random() * 0.08 + 0.002));
+    const ago = (i + 1) * 2;
+    items.push(
+      '<span class="mq-item">' +
+        '<span class="addr"><span data-jz="' + players[i % players.length] + i + '"></span>' +
+        '<span class="addr-text">' + players[i % players.length] + '</span></span>' +
+        '<span class="text-subtle">won</span>' +
+        '<span class="mono ' + (big ? 'text-gold' : '') + '">+' + amt.toFixed(4) + ' ETH</span>' +
+        '<span class="text-subtle">on</span><span>' + games[0] + '</span>' +
+        '<span class="text-subtle">·</span><span class="mono text-subtle">' + ago + 'm ago</span>' +
+        '<a class="escan" href="#" onclick="return false">↗</a>' +
+      '</span>'
+    );
+  }
+  const track = document.getElementById('marquee');
+  track.innerHTML = items.join('') + items.join(''); /* duplicate for seamless loop */
+  /* render mini jazzicons inside marquee */
+  track.querySelectorAll('[data-jz]').forEach((el) => el.prepend(TD.jazzicon(el.getAttribute('data-jz'), 16)));
+})();
+</script>
+</body>
+</html>

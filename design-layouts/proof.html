@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#050403">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Provably Fair Verification — True Dice</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .topbar { border-bottom: 1px solid var(--color-border-subtle); }
+  .topbar-inner { display: flex; align-items: center; height: 72px; gap: 16px; }
+  .wordmark { font-family: var(--font-mono); font-weight: 600; font-size: 16px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--color-primary); }
+  .back-link { margin-left: auto; font-size: 14px; color: var(--color-foreground-muted); transition: color 150ms ease-out; }
+  .back-link:hover { color: var(--color-primary); }
+
+  .proof { max-width: 800px; margin: 0 auto; padding: 48px 32px 96px; }
+  .proof-head { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 40px; }
+  .proof-head > div:first-child { flex: 1; min-width: 0; }
+  .proof-head h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px,5vw,34px); letter-spacing: -0.02em; }
+  .proof-head .sub { font-family: var(--font-mono); font-size: 16px; color: var(--color-foreground-muted); margin-top: 6px; }
+  .proof-head .escan-btn { margin-left: auto; }
+
+  .stepper { display: flex; flex-direction: column; gap: 24px; }
+  .step { position: relative; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 32px; }
+  .step-eyebrow { color: var(--color-foreground-subtle); margin-bottom: 20px; }
+
+  .kv { display: flex; flex-direction: column; gap: 14px; }
+  .kv-row { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
+  .kv-row .k { font-size: 14px; color: var(--color-foreground-muted); white-space: nowrap; }
+  .kv-row .v { font-family: var(--font-mono); font-size: 15px; color: var(--color-foreground); text-align: right; white-space: nowrap; }
+  .kv-row .v.wrap { word-break: break-all; white-space: normal; }
+  .kv-row .v.gold-link { color: var(--color-foreground); }
+
+  .step p.body { font-size: 15px; line-height: 1.6; color: var(--color-foreground-muted); margin-bottom: 20px; }
+  .step p.body code { font-family: var(--font-mono); font-size: 13px; background: var(--color-surface-elevated); padding: 2px 6px; border-radius: var(--radius-sm); color: var(--color-foreground); }
+
+  .step-footer { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--color-border-subtle); display: flex; gap: 24px; flex-wrap: wrap; }
+
+  .hashbox { font-family: var(--font-mono); font-size: 14px; color: var(--color-foreground); background: var(--color-surface-elevated); padding: 16px; border-radius: var(--radius-md); word-break: break-all; line-height: 1.6; }
+  .hashbox-label { display: block; margin-bottom: 10px; }
+
+  .calc { font-family: var(--font-mono); font-size: 14px; line-height: 1.7; color: var(--color-foreground); background: var(--color-surface-elevated); padding: 20px; border-radius: var(--radius-md); white-space: pre; overflow-x: auto; }
+  .calc .win { color: var(--color-primary); }
+
+  .outcome-card { margin-top: 22px; background: var(--color-surface-elevated); border-radius: var(--radius-md); box-shadow: var(--shadow-gold-rim-strong); padding: 22px 24px; }
+  .outcome-card .label { color: var(--color-foreground-subtle); margin-bottom: 8px; }
+  .outcome-card .val { font-family: var(--font-mono); font-size: clamp(22px,4vw,28px); color: var(--color-primary); letter-spacing: -0.01em; }
+  .outcome-card.loss { box-shadow: inset 0 0 0 1px rgba(139,44,44,0.5); }
+  .outcome-card.loss .val { color: var(--color-danger-bright); }
+
+  .proof-foot { max-width: 640px; margin: 56px auto 0; text-align: center; font-family: var(--font-sans); font-size: 17px; line-height: 1.6; color: var(--color-foreground-muted); }
+
+  @media (max-width: 600px) {
+    .proof { padding: 32px 20px 64px; }
+    .proof-head .escan-btn { margin-left: 0; width: 100%; }
+    .kv-row { flex-direction: column; gap: 4px; }
+    .kv-row .v { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="container topbar-inner">
+    <a href="index.html" class="brand-logo" aria-label="True Dice"><img src="assets/logo.png" alt="True Dice"></a>
+    <a href="dice.html" class="back-link">← Back to table</a>
+  </div>
+</nav>
+
+<main class="proof">
+  <div class="proof-head">
+    <div>
+      <h1>Provably Fair Verification</h1>
+      <div class="sub">Roll #<span id="rollNo">1023845</span></div>
+    </div>
+    <a class="btn btn-ghost-gold btn-md escan-btn" href="#" onclick="return false">Open on Etherscan ↗</a>
+  </div>
+
+  <div class="stepper">
+
+    <!-- Step 1 -->
+    <section class="step">
+      <div class="step-eyebrow eyebrow">Step 1 · Bet Placed</div>
+      <div class="kv">
+        <div class="kv-row"><span class="k">Player</span><span class="v"><a class="escan" href="#" onclick="return false"><span class="escan-label" id="player">0x7a3...d2f</span> ↗</a></span></div>
+        <div class="kv-row"><span class="k">Stake</span><span class="v" id="stake">0.0010 ETH</span></div>
+        <div class="kv-row"><span class="k">Roll Under</span><span class="v" id="rollUnder">4950 (49.50%)</span></div>
+        <div class="kv-row"><span class="k">Multiplier</span><span class="v" id="mult">2.0000×</span></div>
+      </div>
+      <div class="step-footer">
+        <a class="escan" href="#" onclick="return false"><span class="escan-label">Transaction · 0xabc...123</span> ↗</a>
+        <a class="escan" href="#" onclick="return false"><span class="escan-label">Block · <span id="block">6238472</span></span> ↗</a>
+      </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="step">
+      <div class="step-eyebrow eyebrow">Step 2 · Chainlink VRF Request</div>
+      <p class="body">Contract called <code>requestRandomWords()</code> on Chainlink VRFCoordinatorV2_5. The request is now waiting for verifiable randomness.</p>
+      <div class="kv">
+        <div class="kv-row"><span class="k">Request ID</span><span class="v wrap" id="reqId">78394201845207...</span></div>
+        <div class="kv-row"><span class="k">Subscription ID</span><span class="v">12345</span></div>
+        <div class="kv-row"><span class="k">Confirmations required</span><span class="v">3</span></div>
+      </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="step">
+      <div class="step-eyebrow eyebrow">Step 3 · VRF Fulfillment</div>
+      <p class="body">Chainlink VRF oracle returned cryptographically verifiable randomness.</p>
+      <div class="hashbox">
+        <span class="hashbox-label eyebrow">Random Word (256 bits)</span>
+        <span id="randWord">0x4f2e9a8b1c7d3e5f6a8b2c4d6e8f0a1b3c5d7e9f2a4b6c8d0e2f4a6b8c0d2e4f</span>
+      </div>
+      <div class="step-footer">
+        <a class="escan" href="#" onclick="return false"><span class="escan-label">Fulfillment Tx · 0xdef...456</span> ↗</a>
+      </div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="step">
+      <div class="step-eyebrow eyebrow">Step 4 · Settlement</div>
+      <p class="body">Contract deterministically calculated the result and paid out.</p>
+      <div class="calc" id="calc"></div>
+      <div class="outcome-card" id="outcome">
+        <div class="label eyebrow">Outcome</div>
+        <div class="val" id="outcomeVal">WON +0.0010 ETH net</div>
+      </div>
+    </section>
+
+  </div>
+
+  <p class="proof-foot">"Anyone with the requestId and the public blockchain can derive this same result. We can't change it. We didn't generate it. That's the point."</p>
+</main>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id') || '783942018452079341267';
+  $ = (x) => document.getElementById(x);
+
+  /* derive deterministic values from the requestId */
+  let seed = 0;
+  for (let i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+  const rnd = (n) => { seed = (seed * 1103515245 + 12345) >>> 0; return seed % n; };
+
+  const chanceOptions = [49.5, 25, 75, 33.33, 60, 90];
+  const chance = chanceOptions[rnd(chanceOptions.length)];
+  const under = Math.round(chance * 100);
+  const mult = (99 / chance);
+  const stake = [0.001, 0.0025, 0.005, 0.01][rnd(4)];
+  const result = rnd(10000);
+  const won = result < under;
+  const block = 6238472 + rnd(800);
+
+  $('rollNo').textContent = (1000000 + rnd(99999)).toLocaleString();
+  $('player').textContent = '0x7a3...d2f';
+  $('stake').textContent = stake.toFixed(4) + ' ETH';
+  $('rollUnder').textContent = under + ' (' + chance.toFixed(2) + '%)';
+  $('mult').textContent = mult.toFixed(4) + '×';
+  $('block').textContent = block.toLocaleString();
+  $('reqId').textContent = id;
+
+  /* build a plausible 256-bit hex from seed */
+  let hex = '0x';
+  let s2 = seed;
+  for (let i = 0; i < 64; i++) { s2 = (s2 * 1103515245 + 12345) >>> 0; hex += '0123456789abcdef'[s2 & 15]; }
+  $('randWord').textContent = hex;
+
+  const payout = won ? stake * mult : 0;
+  const net = won ? payout - stake : -stake;
+
+  const calc =
+    'result = randomWord % 10000\n' +
+    '       = ' + result + '\n\n' +
+    result + (won ? ' <  ' : ' >= ') + under + ' (rollUnder)\n' +
+    '       → ' + (won ? 'WIN ✓' : 'LOSS ✗') + '\n\n' +
+    (won
+      ? 'payout = stake × multiplier\n       = ' + stake.toFixed(4) + ' × ' + mult.toFixed(4) + '\n       = ' + payout.toFixed(4) + ' ETH'
+      : 'payout = 0.0000 ETH');
+  /* highlight the win/loss verdict line */
+  $('calc').innerHTML = calc.replace(won ? 'WIN ✓' : 'LOSS ✗', '<span class="win">' + (won ? 'WIN ✓' : 'LOSS ✗') + '</span>');
+
+  const outcome = $('outcome');
+  const ov = $('outcomeVal');
+  if (won) {
+    ov.textContent = 'WON +' + net.toFixed(4) + ' ETH net';
+  } else {
+    outcome.classList.add('loss');
+    ov.textContent = 'LOST -' + stake.toFixed(4) + ' ETH';
+  }
+})();
+</script>
+</body>
+</html>

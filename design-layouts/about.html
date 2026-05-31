@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" style="background:#050403">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How True Dice Works — True Dice</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .topbar { position: sticky; top: 0; z-index: 50; transition: background 200ms ease-out, border-color 200ms ease-out; border-bottom: 1px solid transparent; }
+  .topbar.scrolled { background: rgba(5,4,3,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--color-border-subtle); }
+  .topbar-inner { display: flex; align-items: center; height: 72px; gap: 24px; }
+  .wordmark { font-family: var(--font-mono); font-weight: 600; font-size: 16px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--color-primary); }
+  .topbar-links { margin-left: auto; display: flex; gap: 24px; }
+  .topbar-links a { font-size: 14px; color: var(--color-foreground-muted); transition: color 150ms ease-out; }
+  .topbar-links a:hover { color: var(--color-primary); }
+
+  .about { max-width: 720px; margin: 0 auto; padding: 72px 32px 96px; }
+  .about-eyebrow { margin-bottom: 24px; }
+  .about h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(34px,6vw,44px); letter-spacing: -0.025em; line-height: 1.1; }
+  .about .lede { font-size: 19px; line-height: 1.6; color: var(--color-foreground-muted); margin-top: 24px; }
+
+  .about section { margin-top: 56px; padding-top: 40px; border-top: 1px solid var(--color-border-subtle); }
+  .about h3 { font-family: var(--font-display); font-weight: 600; font-size: 24px; letter-spacing: -0.01em; margin-bottom: 16px; }
+  .about p { font-size: 16px; line-height: 1.7; color: var(--color-foreground-muted); margin-bottom: 16px; }
+  .about p:last-child { margin-bottom: 0; }
+  .about code, .about .m { font-family: var(--font-mono); font-size: 14px; color: var(--color-foreground); background: var(--color-surface-elevated); padding: 2px 6px; border-radius: var(--radius-sm); }
+  .about a.inline { color: var(--color-primary); }
+  .about a.inline:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .formula { font-family: var(--font-mono); font-size: 15px; line-height: 1.8; color: var(--color-foreground); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 20px 24px; margin: 20px 0; white-space: pre-wrap; }
+  .formula .g { color: var(--color-primary); }
+
+  .about-cta { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<nav class="topbar" data-nav>
+  <div class="container topbar-inner">
+    <a href="index.html" class="brand-logo" aria-label="True Dice"><img src="assets/logo.png" alt="True Dice"></a>
+    <div class="topbar-links">
+      <a href="dice.html">Dice</a>
+      <a href="about.html">About</a>
+    </div>
+  </div>
+</nav>
+
+<main class="about">
+  <div class="about-eyebrow eyebrow">Provably Fair · Documentation</div>
+  <h1>How True Dice Works</h1>
+  <p class="lede">No house secrets, no hidden seed, no trust required. Every roll is decided by Chainlink VRF and settled in a single transaction you can inspect on-chain.</p>
+
+  <section>
+    <h3>The Game</h3>
+    <p>You choose a <span class="m">Win Chance</span> between <span class="m">2.00%</span> and <span class="m">98.00%</span>. The contract converts that to a <span class="m">Roll Under</span> threshold on a <span class="m">0–9999</span> range — a 49.50% chance means you win if the roll lands under <span class="m">4950</span>.</p>
+    <p>The lower your win chance, the higher your <span class="m">Multiplier</span>. Pick your risk; the math is fixed and public.</p>
+  </section>
+
+  <section>
+    <h3>The Math</h3>
+    <p>Payout is deterministic. The multiplier is derived from your win chance with a flat <span class="m">1.00%</span> house edge:</p>
+    <div class="formula">multiplier = <span class="g">99</span> / winChance
+payout     = stake × multiplier
+houseEdge  = <span class="g">1.00%</span></div>
+    <p>At 49.50% win chance, the multiplier is <span class="m">2.0000×</span>. A <span class="m">0.0010 ETH</span> stake returns <span class="m">0.0020 ETH</span> on a win — a net profit of <span class="m">0.0010 ETH</span>.</p>
+  </section>
+
+  <section>
+    <h3>The Proof</h3>
+    <p>When you roll, the contract calls <code>requestRandomWords()</code> on Chainlink VRF. The oracle returns a 256-bit random word with a cryptographic proof that it was generated fairly and could not have been predicted or tampered with.</p>
+    <p>The result is just <code>randomWord % 10000</code>. Anyone holding the <span class="m">requestId</span> can re-derive the exact same outcome from public chain data. <a class="inline" href="proof.html?id=783942018452079341267">See a worked example →</a></p>
+  </section>
+
+  <section>
+    <h3>The Code</h3>
+    <p>The contract is verified and open source. Read it, audit it, fork it. We can't change a deployed roll, and neither can you — that's the point.</p>
+    <div class="about-cta">
+      <a class="btn btn-ghost-gold btn-md" href="#" onclick="return false">View contract on Etherscan ↗</a>
+      <a class="btn btn-ghost btn-md" href="#" onclick="return false">GitHub ↗</a>
+    </div>
+  </section>
+</main>
+
+<script src="shared.js"></script>
+</body>
+</html>
