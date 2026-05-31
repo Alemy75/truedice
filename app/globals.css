@@ -473,15 +473,79 @@ img, svg { display: block; }
   display: flex; align-items: center; justify-content: center;
   text-align: center; overflow: hidden; padding-top: 76px;
 }
-.hero-banner { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.hero-banner picture { display: block; width: 100%; height: 100%; }
-.hero-banner img { width: 100%; height: 100%; object-fit: cover; object-position: center center; }
-.hero-banner::after {
-  content: ""; position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 54% 50% at 50% 48%, rgba(5,4,3,0.66) 0%, rgba(5,4,3,0.30) 56%, transparent 80%),
-    linear-gradient(0deg, var(--color-background) 0%, transparent 24%),
-    linear-gradient(180deg, rgba(5,4,3,0.34) 0%, transparent 18%);
+.hero-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Two halves of the hero artwork, each pinned to a side. Same source
+   image, but with background-position cropping it to show only the
+   relevant palm. Container width determines how much of the palm fans
+   into view — center area is left as pure background for the H1. */
+.hero-palm {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background-image: url("/assets/hero-desktop.webp");
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+}
+.hero-palm-left {
+  left: 0;
+  width: 40%;
+  background-position: left center;
+}
+.hero-palm-right {
+  right: 0;
+  width: 40%;
+  background-position: right center;
+}
+
+/* Diagonal fade overlays — palm reads at the outer-top corner and
+   melts into the page background toward the inner-bottom corner.
+   Left palm fade direction: top-left → bottom-right (135deg)
+   Right palm mirror:        top-right → bottom-left (225deg) */
+.hero-palm-left::after,
+.hero-palm-right::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    var(--hero-fade-angle, 135deg),
+    transparent 0%,
+    transparent 30%,
+    rgba(5, 4, 3, 0.55) 70%,
+    var(--color-background) 95%
+  );
+}
+.hero-palm-right::after {
+  --hero-fade-angle: 225deg;
+}
+
+/* Mobile artwork swap — bgs change to the mobile crop + slightly wider
+   so each palm has more breathing room and the diagonal fade is more
+   pronounced (mobile centerline is closer to the palms). */
+@media (max-width: 700px) {
+  .hero-palm {
+    background-image: url("/assets/hero-mobile.webp");
+  }
+  .hero-palm-left,
+  .hero-palm-right {
+    width: 46%;
+  }
+  .hero-palm-left::after,
+  .hero-palm-right::after {
+    background: linear-gradient(
+      var(--hero-fade-angle, 135deg),
+      transparent 0%,
+      transparent 22%,
+      rgba(5, 4, 3, 0.70) 60%,
+      var(--color-background) 88%
+    );
+  }
 }
 .hero-inner { position: relative; z-index: 1; width: 100%; display: flex; justify-content: center; }
 .hero-text { max-width: 640px; margin: 0 auto; }
@@ -587,20 +651,6 @@ img, svg { display: block; }
   .stats-grid { grid-template-columns: 1fr; gap: 0; }
   .stat { padding: 22px 0; }
   .stat + .stat { border-left: 0; border-top: 1px solid var(--color-border-subtle); }
-
-  /* Hero banner on phones: keep the top of the artwork visible, hide
-     the messy bottom under a strong fade to background. */
-  .hero-banner img {
-    object-fit: contain;
-    object-position: center top;
-  }
-  .hero-banner::after {
-    background:
-      /* Heavier bottom fade — hides the lower half of the contained image */
-      linear-gradient(0deg, var(--color-background) 0%, var(--color-background) 32%, transparent 62%),
-      radial-gradient(ellipse 70% 50% at 50% 35%, rgba(5,4,3,0.55) 0%, rgba(5,4,3,0.20) 60%, transparent 85%),
-      linear-gradient(180deg, rgba(5,4,3,0.30) 0%, transparent 20%);
-  }
 
   /* Eyebrow: tighter letter-spacing + slightly smaller font + allow natural
      wrap onto 2-3 lines so "ON-CHAIN · CHAINLINK VRF · ETHEREUM SEPOLIA"

@@ -38,12 +38,12 @@ export default function LobbyPage() {
 
       {/* HERO */}
       <header className="hero">
-        <div className="hero-banner">
-          <picture>
-            <source media="(max-width: 700px)" srcSet="/assets/hero-mobile.webp" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/hero-desktop.webp" alt="True Dice" />
-          </picture>
+        <div className="hero-banner" aria-hidden>
+          {/* Each palm is a background-image clip pinned to its edge.
+              No <picture> — the responsive image swap happens in CSS via
+              @media so we keep two separate sides for diagonal fades. */}
+          <div className="hero-palm hero-palm-left" />
+          <div className="hero-palm hero-palm-right" />
         </div>
         <div className="container hero-inner">
           <div className="hero-text">
