@@ -20,6 +20,7 @@ import {
   MIN_ROLL_UNDER,
   MAX_ROLL_UNDER,
   MAX_BET_BPS_OF_BANKROLL,
+  MIN_BET_WEI,
 } from "@/lib/multiplier";
 import {
   formatEth,
@@ -106,6 +107,9 @@ export default function DicePage() {
     stakeWei > 0n && balance !== undefined && stakeWei > (balance as bigint);
   const overBankroll =
     stakeWei > 0n && maxBetWei !== undefined && stakeWei > maxBetWei;
+  // Contract reverts BetTooSmall if stake < MIN_BET — validate client-side
+  // to avoid a wasted gas roundtrip.
+  const underMin = stakeWei > 0n && stakeWei < MIN_BET_WEI;
 
   // Roll state derived from phase
   const isInFlight =
@@ -169,7 +173,9 @@ export default function DicePage() {
 
   // CTA help text
   let ctaHelp = "";
-  if (overBankroll && !overBalance)
+  if (underMin)
+    ctaHelp = `Minimum bet is ${formatEth(MIN_BET_WEI, 4)} ETH (contract MIN_BET).`;
+  else if (overBankroll && !overBalance)
     ctaHelp = "Bet exceeds 1% of casino bankroll. Reduce bet or wait for next roll.";
   else if (overBalance) ctaHelp = "Insufficient balance. Deposit more to bet this much.";
 
@@ -179,6 +185,7 @@ export default function DicePage() {
     (balance as bigint) === 0n ||
     overBalance ||
     overBankroll ||
+    underMin ||
     stakeWei <= 0n;
 
   async function onRoll() {
@@ -199,13 +206,8 @@ export default function DicePage() {
     }
   }
 
-  function half() {
-    if (!stakeWei) return;
-    setStake(formatEth(stakeWei / 2n, 6));
-  }
-  function double() {
-    if (!stakeWei) return;
-    setStake(formatEth(stakeWei * 2n, 6));
+  function setMin() {
+    setStake(formatEth(MIN_BET_WEI, 6));
   }
   function setMax() {
     let cap: bigint | undefined =
@@ -403,18 +405,11 @@ export default function DicePage() {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm mono"
-                  onClick={half}
-                  disabled={!stakeWei || disabled}
+                  onClick={setMin}
+                  disabled={!isConnected}
+                  title={`Set minimum bet (${formatEth(MIN_BET_WEI, 4)} ETH)`}
                 >
-                  ½
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm mono"
-                  onClick={double}
-                  disabled={!stakeWei || disabled}
-                >
-                  2×
+                  Min
                 </button>
                 <button
                   type="button"
@@ -424,6 +419,7 @@ export default function DicePage() {
                     !isConnected ||
                     (balance === undefined && maxBetWei === undefined)
                   }
+                  title="Set maximum bet (limited by your balance and 1% bankroll cap)"
                 >
                   Max
                 </button>
