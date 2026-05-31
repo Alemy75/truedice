@@ -5,7 +5,7 @@ Verifiable casino dice on Ethereum Sepolia. Every roll is decided by Chainlink V
 **Submission for the Vibe-Code 48h Frontend Challenge (May 30 – June 1, 2026).**
 
 - **Live**: https://truedice.vercel.app *(replace with final Vercel URL)*
-- **Contract**: [`0x6049702d...aDF412`](https://sepolia.etherscan.io/address/0x6049702d7eb6bFE095d66c80c9FFD5b224aDF412) — verified source on Sepolia Etherscan
+- **Contract**: [`0xAfF7cF9887...3DE8eB9A`](https://sepolia.etherscan.io/address/0xAfF7cF9887b2e59D7402BEb3CDc7822e3DE8eB9A) — verified source on Sepolia Etherscan
 - **Repo**: https://github.com/Alemy75/truedice
 - **Loom**: *(to be added — 5 min walkthrough)*
 
@@ -96,17 +96,18 @@ Bonus quirk: Sepolia's LINK/ETH price feed is so depressed that a 200k-gas callb
 
 1. **L2 deploy (Base)** — see migration table above. Highest-impact unlock.
 2. **Multiple games** — Plinko + Slots reuse the VRF + event-feed plumbing with minimal contract changes.
-3. **Native ETH VRF payment** — sidesteps the LINK/ETH price-feed quirk on Sepolia. One-line change (`extraArgs.nativePayment: true`) + native-funded subscription.
-4. **Auto-bet** with martingale / Fibonacci + stop-loss/stop-win.
-5. **Subgraph** for ROI charts and leaderboards.
-6. **NFT-gated VIP tier** — own an ERC-721, get reduced (non-zero) house edge.
+3. **Ring buffer fix in `_pushRecent`** — current O(N) shift-array burns ~140k gas per VRF callback after first 50 bets. Switching to index-pointer circular buffer reduces callback gas 3×.
+4. **Native ETH VRF payment** — sidesteps the LINK/ETH price-feed quirk above. One-line change.
+5. **Auto-bet** with martingale / Fibonacci + stop-loss/stop-win.
+6. **Subgraph** for ROI charts and leaderboards.
+7. **NFT-gated VIP tier** — own an ERC-721, get reduced (non-zero) house edge.
 
 ## 🤖 How I used AI tools
 
 I leaned heavily on Claude (Anthropic) as primary copilot through every layer:
 
 - **Spec + Plan**: Claude co-authored `TASK.md`, `DESIGN.md`, and a detailed 27-task implementation plan in `docs/superpowers/plans/` over ~2h of back-and-forth. The single most valuable use — execution after that was almost mechanical.
-- **Smart contract**: full TDD by a dispatched Claude subagent. 31 tests + fuzz test, **100% line / branch / function coverage** on `CasinoDice.sol`. ~10 min wall time.
+- **Smart contract**: full TDD by a dispatched Claude subagent. 29 tests + fuzz test, **100% line / branch / function coverage** on `CasinoDice.sol`. ~10 min wall time.
 - **Frontend foundation**: a second subagent wrote globals.css tokens, wagmi/RainbowKit providers, format utilities + vitest tests, ABI export, contract hooks. ~10 min.
 - **Design system**: visual mockups in `claude-design-layouts/` generated via Claude Design from the `DESIGN.md` brief — Cinzel + warm-black + gold palette, hero banner, dice canvas, etc.
 - **Pixel-perfect rewrite**: when the initial Tailwind translation diverged from the design, I dispatched two parallel subagents to rewrite `/dice` + `/about` using raw design CSS class names. ~10 min each.
@@ -192,7 +193,7 @@ pnpm install
 cp .env.example .env                # fill in your own keys
 
 # Smart contract
-pnpm contracts:test                 # forge tests (31 tests + 256-run fuzz)
+pnpm contracts:test                 # forge tests (29 tests)
 pnpm contracts:coverage             # forge coverage --report summary
 pnpm contracts:deploy               # broadcast + verify on Sepolia
 
