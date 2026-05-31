@@ -239,9 +239,9 @@ img, svg { display: block; }
    ============================================================ */
 .nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-  /* always-on blur (no scroll-state switching needed) */
-  background: rgba(5,4,3,0.72);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  /* Lighter blur — content behind shows through more clearly */
+  background: rgba(5,4,3,0.55);
+  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
   border-bottom: 1px solid var(--color-border-subtle);
 }
 .nav-inner {
@@ -372,7 +372,7 @@ img, svg { display: block; }
 }
 
 /* Burger menu — hidden on desktop, shown ≤ 960px. Lives inside .nav-right
-   so on mobile it ends up rightmost (after wallet + balance dropdown). */
+   so on mobile it ends up rightmost (right after Balance). */
 .nav-burger-wrap { position: relative; display: none; }
 .nav-burger {
   display: inline-flex;
@@ -395,7 +395,7 @@ img, svg { display: block; }
   top: calc(100% + 8px);
   right: 0;
   transform: translateY(-6px);
-  min-width: 180px;
+  min-width: 220px;
   background: var(--color-surface-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -427,11 +427,41 @@ img, svg { display: block; }
   background: var(--color-surface-overlay);
   color: var(--color-primary);
 }
+.nav-burger-menu-divider {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: 6px 4px;
+}
+.nav-burger-menu-wallet {
+  padding: 6px 8px;
+  /* Make the wallet pill stretch to fill the popover width */
+  display: flex;
+}
+.nav-burger-menu-wallet > div,
+.nav-burger-menu-wallet > .btn,
+.nav-burger-menu-wallet > button {
+  width: 100%;
+}
+.nav-burger-menu-wallet .menu-trigger,
+.nav-burger-menu-wallet .btn {
+  width: 100%;
+  justify-content: space-between;
+}
 
-/* Switch inline links → burger on tablet/mobile (≤ 960px) */
+/* Mobile breakpoint: inline links → burger, hide desktop wallet position,
+   match burger height with Balance pill so they read as one cluster. */
 @media (max-width: 960px) {
   .nav-links { display: none; }
   .nav-burger-wrap { display: block; }
+  .nav-wallet-desktop { display: none; }
+  /* Burger height matches the compact .menu-trigger height set at 640px */
+}
+@media (max-width: 640px) {
+  .nav-burger,
+  .nav-burger:hover {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .hero {

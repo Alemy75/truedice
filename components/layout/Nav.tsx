@@ -10,16 +10,22 @@ import { cn } from "@/lib/cn";
 /**
  * Site-wide nav header.
  *
- * Layout:
- *   Desktop (≥ 960px):
- *     [LOGO]    [Dice  Live  About — absolutely centered]    [Balance · Wallet]
+ * Desktop (≥ 960px):
+ *   [LOGO]    [Dice  Live  About]    [Balance · Wallet]
  *
- *   Tablet/Mobile (< 960px):
- *     [LOGO]                                  [Balance · Wallet · Burger]
+ * Tablet/Mobile (< 960px):
+ *   [LOGO]                           [Balance · ☰]
+ *                                            └── popover ──┐
+ *                                                          │  Dice
+ *                                                          │  Live
+ *                                                          │  About
+ *                                                          │  ──────
+ *                                                          │  [Wallet]
+ *                                                          └──
  *
- * Everything except the logo lives in .nav-right, so on mobile the cluster
- * sits flush against the right edge with equal gaps between siblings.
- * Burger is the last child → rightmost position.
+ * On mobile the wallet pill moves INTO the burger popover so the
+ * always-visible cluster collapses to just Balance + Burger (same
+ * height, adjacent — reads as one unit).
  */
 export function Nav() {
   const [burgerOpen, setBurgerOpen] = useState(false);
@@ -53,18 +59,24 @@ export function Nav() {
           <img src="/assets/logo.png" alt="True Dice" />
         </Link>
 
-        {/* Desktop links — absolutely centered relative to .nav-inner. Hidden ≤ 960px. */}
+        {/* Desktop nav-links — absolutely centered; hidden on tablet/mobile */}
         <div className="nav-links">
           <Link href="/dice">Dice</Link>
           <Link href="/dice#feed">Live</Link>
           <Link href="/about">About</Link>
         </div>
 
-        {/* Right cluster: Balance · Wallet · Burger (mobile only).
-            Equal gap=12px between every sibling. */}
+        {/* Right cluster */}
         <div className="nav-right">
           <BalanceDropdown />
-          <BrandedConnectButton />
+
+          {/* Wallet button — desktop position. Hidden on mobile via CSS. */}
+          <div className="nav-wallet-desktop">
+            <BrandedConnectButton />
+          </div>
+
+          {/* Burger — mobile/tablet only. Holds nav links + the wallet
+              button inside its popover so the cluster stays compact. */}
           <div className="nav-burger-wrap" ref={burgerWrapRef}>
             <button
               type="button"
@@ -88,6 +100,10 @@ export function Nav() {
               <Link href="/about" onClick={() => setBurgerOpen(false)}>
                 About
               </Link>
+              <div className="nav-burger-menu-divider" />
+              <div className="nav-burger-menu-wallet">
+                <BrandedConnectButton />
+              </div>
             </div>
           </div>
         </div>
