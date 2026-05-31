@@ -13,7 +13,7 @@ const STYLES = {
 export function PhasePill({ phase }: { phase: DicePhase }) {
   let label = "Idle — Ready to roll";
   let dotClass = "bg-foreground-subtle";
-  let style = STYLES.idle;
+  let style: string = STYLES.idle;
   let pulse = false;
 
   switch (phase.kind) {
