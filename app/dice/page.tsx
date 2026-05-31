@@ -510,6 +510,8 @@ export default function DicePage() {
 /* ------------------------------------------------------------------
    Tab content: bets table
    ------------------------------------------------------------------ */
+const TABLE_PAGE_SIZE = 10;
+
 function BetsTable({
   rows,
   showPlayer,
@@ -521,6 +523,14 @@ function BetsTable({
   isConnected: boolean;
   tab: TabKey;
 }) {
+  const [visibleCount, setVisibleCount] = useState(TABLE_PAGE_SIZE);
+
+  // Reset pagination when the user switches tabs — each tab gets a
+  // fresh "page 1".
+  useEffect(() => {
+    setVisibleCount(TABLE_PAGE_SIZE);
+  }, [tab]);
+
   if (tab === "mine" && !isConnected) {
     return (
       <div className="tab-empty">
@@ -545,7 +555,12 @@ function BetsTable({
     );
   }
 
+  const visibleRows = rows.slice(0, visibleCount);
+  const hasMore = rows.length > visibleCount;
+  const remaining = rows.length - visibleCount;
+
   return (
+    <>
     <div style={{ overflowX: "auto" }}>
       <table className="dtable">
         <thead>
@@ -560,7 +575,7 @@ function BetsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {visibleRows.map((r) => (
             <tr key={r.requestId.toString()}>
               <td className="text-muted col-time">
                 {formatRelativeTime(r.timestamp)}
@@ -610,5 +625,22 @@ function BetsTable({
         </tbody>
       </table>
     </div>
+    {hasMore && (
+      <div className="table-load-more">
+        <button
+          type="button"
+          className="table-load-more-btn"
+          onClick={() =>
+            setVisibleCount((n) => n + TABLE_PAGE_SIZE)
+          }
+        >
+          Load more
+          <span className="table-load-more-count">
+            ({Math.min(remaining, TABLE_PAGE_SIZE)} of {remaining})
+          </span>
+        </button>
+      </div>
+    )}
+    </>
   );
 }

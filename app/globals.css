@@ -1203,6 +1203,43 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
 .tab.active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; background: var(--color-primary); }
 .tab-empty { padding: 56px 24px; text-align: center; color: var(--color-foreground-muted); font-size: 14px; }
 .tab-empty .ico { font-size: 28px; opacity: 0.4; margin-bottom: 12px; }
+
+/* "Load more" pagination footer under bets table. Text-button style —
+   centered, muted by default, gold on hover. */
+.table-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 18px 24px 22px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.table-load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-foreground-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  transition: color 150ms ease-out, background 150ms ease-out;
+}
+.table-load-more-btn:hover {
+  color: var(--color-primary);
+  background: rgba(212, 175, 55, 0.06);
+}
+.table-load-more-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-foreground-subtle);
+  text-transform: none;
+  letter-spacing: 0;
+}
 .verify-btn { display: inline-flex; align-items: center; gap: 4px; color: var(--color-foreground-muted); transition: color 150ms ease-out; }
 .verify-btn:hover { color: var(--color-primary); }
 .mark-win { color: var(--color-primary); }
