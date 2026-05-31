@@ -65,12 +65,12 @@ export function useDicePhase() {
         if (current.requestId && requestId !== current.requestId) {
           return current;
         }
-        // auto-reset to idle after 4s so player sees the result
-        setTimeout(() => {
-          setPhase({ kind: "idle" });
-          reset();
-          setTxHash(undefined);
-        }, 4000);
+        // Result screen stays visible until either:
+        //   1. The component unmounts (user navigates away from /dice), or
+        //   2. The player starts a new bet (placeBet() clears state below).
+        // Previously we auto-reset after 4 seconds — that hid a quick win
+        // before the player could read the payout. Now they see it as long
+        // as they want.
         return won
           ? { kind: "won", payout, result, requestId }
           : { kind: "lost", result, requestId };
@@ -83,6 +83,12 @@ export function useDicePhase() {
       if (!address) throw new Error("not connected");
       const stake = parseEther(stakeEth as `${number}`);
       calcMultiplierBps(rollUnder); // throws if out of range
+      // Clear any lingering state from the previous bet (won/lost screen,
+      // stale txHash from useWriteContract). Without this, starting a new
+      // bet from a "won" phase could leak the prior tx hash into the new
+      // useWaitForTransactionReceipt call.
+      reset();
+      setTxHash(undefined);
       setPhase({ kind: "confirm" });
       try {
         const hash = await writeContractAsync({
@@ -98,7 +104,7 @@ export function useDicePhase() {
         throw err;
       }
     },
-    [address, contract, writeContractAsync],
+    [address, contract, writeContractAsync, reset],
   );
 
   return { phase, placeBet };

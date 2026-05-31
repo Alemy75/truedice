@@ -80,7 +80,11 @@ export default function DicePage() {
         origin,
       });
     }
-    if (phase.kind === "idle") {
+    // Reset confetti guard when a new bet starts (or on initial mount).
+    // Previously we only reset on "idle" because phase auto-returned to
+    // idle 4s after settlement; now the result screen sticks until the
+    // player initiates the next bet, so we key off "confirm" instead.
+    if (phase.kind === "idle" || phase.kind === "confirm") {
       lastShownResult.current = null;
     }
   }, [phase]);
