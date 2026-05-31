@@ -931,6 +931,9 @@ img, svg { display: block; }
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 28px;
   align-items: stretch;
+  /* Container query context for .canvas-card — so canvas-card can react
+     to ITS own column width instead of the viewport (square below 500). */
+  container-type: inline-size;
 }
 
 /* ---- Dice canvas ---- */
@@ -1309,31 +1312,36 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
 .vrf-stall p { color: var(--color-foreground-muted); line-height: 1.55; }
 .vrf-stall code { font-family: var(--font-mono); color: var(--color-foreground); }
 
-/* Stack on narrow desktop / tablet — bumped 1024 → 1100 because at
-   ~1030-1080 the canvas-card was visually crowding the form column.
-   Keep canvas-card SQUARE in this stacked range (was 16/11) so the
-   dice-frame.png square artwork slices cleanly into both .dice-palm
-   sides — at 16/11 the image stretched too thin horizontally and the
-   inside edge of each palm went outside the container, leaving a
-   visible empty strip between palms ~700-1000 px wide. Square aspect
-   + max-width keeps the layout reasonable. */
+/* Stack on narrow desktop / tablet — bumped 1024 → 1100. In stacked
+   mode the canvas-card uses a FIXED height (500 px) instead of an
+   aspect-ratio, so the bet form below it doesn't get pushed too far
+   down on tablets where the column is wide. */
 @media (max-width: 1100px) {
   .play-grid { grid-template-columns: 1fr; }
   .canvas-card {
-    aspect-ratio: 1;
+    aspect-ratio: unset;
     width: 100%;
-    max-width: 560px;
+    height: 500px;
+    max-width: none;
     margin-left: auto;
     margin-right: auto;
   }
   .result-track { width: 44%; max-width: 320px; bottom: 24px; }
 }
-@media (max-width: 600px) {
+
+/* When the canvas-card column itself drops below 500 px (narrow phones),
+   switch back to a 1:1 square so it stays proportional rather than
+   becoming taller than wide. Uses container queries — reacts to the
+   .play-grid width, not the viewport, so it works regardless of any
+   future page chrome. */
+@container (max-width: 500px) {
   .canvas-card {
     aspect-ratio: 1;
-    max-width: none;
-    width: 100%;
+    height: auto;
   }
+}
+
+@media (max-width: 600px) {
   .result-track { width: 48%; max-width: none; bottom: 20px; }
   .track-labels { font-size: 10px; }
   .dice-idle { padding: 0 26%; }
