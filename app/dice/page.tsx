@@ -265,17 +265,10 @@ export default function DicePage() {
             <div className="canvas-vignette" />
             {/* Animation layer (bottom). Always running; lifecycle keyed to phase. */}
             <BetSpinner phase={phase} />
-            {/* Static palm/dice frame ABOVE the spinner so it remains the
-                visual signature of the page (animation peeks through subtly
-                between the leaves). */}
+            {/* Static palm/dice frame above the spinner — visual signature
+                of the page. Text + result-track layer above this stay
+                at full clarity. */}
             <div className="dice-frame" />
-            {/* Darkening veil over animation + palm. Visible when text is
-                shown (idle / settled). Smooth fade so the transition into
-                "ROLLING" feels like the veil lifts. */}
-            <div
-              className="canvas-veil"
-              data-show={isIdle || settled ? "true" : "false"}
-            />
 
             {isIdle && (
               <div className="dice-idle">

@@ -650,14 +650,12 @@ img, svg { display: block; }
 .canvas-card.grain::before { z-index: 0; }
 /* Layer stack inside .canvas-card:
    z=0  .canvas-vignette       gold-tinted radial
-   z=1  .bet-spinner-canvas    animated pixel dice (size-clipped to palm gap)
-   z=2  .canvas-veil           darken + blur layer that ONLY covers spinner
-   z=3  .dice-frame            static palm PNG (always at full clarity)
+   z=1  .bet-spinner-canvas    animated pixel dice (constrained to palm gap)
+   z=2  .dice-frame            static palm PNG (visual signature)
    z=4  .dice-idle, .dice-number, .dice-readout, .phase-pill, .result-track
 */
 
-/* Animated spinner — bottom layer, peeks through the palm.
-   inset 22% → fits in the central gap between the palm fronds (~56%) */
+/* Animated spinner — under the palm, inside the central gap. */
 .bet-spinner-canvas {
   position: absolute;
   inset: 22%;
@@ -666,30 +664,8 @@ img, svg { display: block; }
   z-index: 1;
   pointer-events: none;
 }
-/* Veil sits BETWEEN spinner and palm — darkens ONLY the animation, not
-   the palm/result-track which keep their own opacity. The veil also
-   matches the spinner's footprint (inset 22%, 56×56%) so the palm
-   fronds are never touched.
-   data-show="true" (idle / settled) → strong darken + blur. */
-.canvas-veil {
-  position: absolute;
-  inset: 22%;
-  width: 56%;
-  height: 56%;
-  z-index: 2;
-  pointer-events: none;
-  background: rgba(5, 4, 3, 0.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 18%;
-  opacity: 0;
-  transition: opacity 600ms ease-out, backdrop-filter 600ms ease-out;
-}
-.canvas-veil[data-show="true"] { opacity: 1; }
-/* Static palm/dice PNG — kept as the visual signature; above the veil
-   so it always reads at full clarity. */
 .dice-frame {
-  position: absolute; inset: -2px; z-index: 3; pointer-events: none;
+  position: absolute; inset: -2px; z-index: 2; pointer-events: none;
   background-image: url("/assets/dice-frame.png");
   background-size: 100% 100%;
   background-position: center;
