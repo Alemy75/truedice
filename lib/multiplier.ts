@@ -1,6 +1,7 @@
 export const HOUSE_EDGE_BPS = 100;
 export const MIN_ROLL_UNDER = 200;
 export const MAX_ROLL_UNDER = 9800;
+export const MAX_BET_BPS_OF_BANKROLL = 100; // 1% of bankroll cap per bet
 
 export function calcMultiplierBps(rollUnder: number): number {
   if (rollUnder < MIN_ROLL_UNDER || rollUnder > MAX_ROLL_UNDER) {
