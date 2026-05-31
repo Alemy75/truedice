@@ -181,6 +181,16 @@ export default function DicePage() {
     stakeWei <= 0n;
 
   async function onRoll() {
+    // On mobile/tablet, the dice canvas is above the bet form (stacked layout).
+    // After clicking ROLL DICE from the form (below the fold), auto-scroll so
+    // the canvas + phase pill are in view while the wallet signs / VRF runs.
+    // Desktop layout is side-by-side — no scroll needed.
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      canvasRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
     try {
       await placeBet(stake, rollUnder);
     } catch (e) {

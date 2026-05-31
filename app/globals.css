@@ -535,6 +535,9 @@ img, svg { display: block; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 32px; overflow: hidden;
   transition: box-shadow 800ms ease-out;
+  /* When auto-scrolled to (after Roll Dice on mobile), leave room for the
+     fixed 76px nav above. */
+  scroll-margin-top: 90px;
 }
 .canvas-card.win { box-shadow: var(--shadow-gold-rim-strong), var(--shadow-glow-primary); }
 .canvas-card.loss { box-shadow: var(--shadow-gold-rim), var(--shadow-glow-danger); }
