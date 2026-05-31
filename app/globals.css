@@ -1327,6 +1327,64 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
 .vrf-stall p { color: var(--color-foreground-muted); line-height: 1.55; }
 .vrf-stall code { font-family: var(--font-mono); color: var(--color-foreground); }
 
+/* ---- Toast notifications ---- */
+.toast-stack {
+  position: fixed; top: 88px; right: 24px; z-index: 110;
+  display: flex; flex-direction: column; gap: 12px;
+  max-width: 380px;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+  animation: toast-in 200ms ease-out;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.toast-success { border-color: rgba(212, 175, 55, 0.55); box-shadow: var(--shadow-card), 0 0 22px rgba(212,175,55,0.08); }
+.toast-error   { border-color: rgba(192, 80, 77, 0.55);  box-shadow: var(--shadow-card), 0 0 22px rgba(192,80,77,0.10); }
+.toast-info    { border-color: rgba(192, 192, 192, 0.40); }
+.toast-body { flex: 1; min-width: 0; }
+.toast-title {
+  font-family: var(--font-sans); font-size: 14px; font-weight: 500;
+  color: var(--color-foreground); line-height: 1.4;
+}
+.toast-success .toast-title { color: var(--color-primary); }
+.toast-error .toast-title   { color: var(--color-danger-bright); }
+.toast-desc {
+  font-size: 13px; color: var(--color-foreground-muted);
+  margin-top: 4px; line-height: 1.5;
+  word-break: break-word;
+}
+.toast-link {
+  display: inline-block; margin-top: 8px; font-size: 12px;
+  color: var(--color-foreground-muted);
+  transition: color 150ms ease-out;
+}
+.toast-link:hover { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
+.toast-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--color-foreground-subtle);
+  font-size: 20px; line-height: 1;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: color 150ms ease-out;
+  flex-shrink: 0;
+}
+.toast-close:hover { color: var(--color-foreground); }
+
+@media (max-width: 640px) {
+  .toast-stack { right: 12px; left: 12px; max-width: none; top: 76px; }
+}
+
 /* Stack on narrow desktop / tablet — bumped 1024 → 1100. In stacked
    mode the canvas-card uses a FIXED height (500 px) instead of an
    aspect-ratio, so the bet form below it doesn't get pushed too far

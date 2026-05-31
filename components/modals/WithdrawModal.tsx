@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Modal } from "./Modal";
 import { useCasinoContract } from "@/hooks/useCasinoContract";
 import { useCasinoBalance } from "@/hooks/useBalance";
 import { formatEth } from "@/lib/format";
+import { useToast } from "@/components/toast/ToastProvider";
 
 const PRESETS = ["0.01", "0.05", "0.1"];
+const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
 
 export function WithdrawModal({
   open,
@@ -19,14 +21,38 @@ export function WithdrawModal({
 }) {
   const contract = useCasinoContract();
   const { data: balance } = useCasinoBalance();
+  const { showToast } = useToast();
   const [amount, setAmount] = useState("0.0100");
   const [error, setError] = useState<string | null>(null);
   const { writeContractAsync, isPending } = useWriteContract();
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
-  const { isLoading: confirming } = useWaitForTransactionReceipt({
+  const [submittedAmount, setSubmittedAmount] = useState<string>("0");
+  const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
     query: { enabled: !!txHash },
   });
+
+  // Reset on close.
+  useEffect(() => {
+    if (!open) {
+      setTxHash(undefined);
+      setError(null);
+    }
+  }, [open]);
+
+  // On successful confirmation: close modal + show success toast.
+  useEffect(() => {
+    if (isSuccess && txHash) {
+      showToast({
+        message: `Withdrew ${submittedAmount} ETH`,
+        description: "Funds are now in your connected wallet.",
+        variant: "success",
+        link: { href: `${ETHERSCAN_BASE}/tx/${txHash}`, label: "View on Etherscan" },
+      });
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess, txHash]);
 
   async function onSubmit() {
     setError(null);
@@ -46,6 +72,7 @@ export function WithdrawModal({
       return;
     }
     try {
+      setSubmittedAmount(Number(amount).toFixed(4));
       const hash = await writeContractAsync({
         ...contract,
         functionName: "withdraw",
@@ -53,7 +80,12 @@ export function WithdrawModal({
       });
       setTxHash(hash);
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      if (/user rejected|denied/i.test(msg)) {
+        setError("Transaction rejected in wallet");
+      } else {
+        setError(msg);
+      }
     }
   }
 

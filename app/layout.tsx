@@ -4,6 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import { Cinzel } from "next/font/google";
 import { Providers } from "./providers";
 import { NetworkBanner } from "@/components/layout/NetworkBanner";
+import { ToastProvider } from "@/components/toast/ToastProvider";
 import "./globals.css";
 
 const cinzel = Cinzel({
@@ -31,8 +32,10 @@ export default function RootLayout({
     >
       <body>
         <Providers>
-          <NetworkBanner />
-          {children}
+          <ToastProvider>
+            <NetworkBanner />
+            {children}
+          </ToastProvider>
         </Providers>
       </body>
     </html>
