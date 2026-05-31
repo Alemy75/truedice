@@ -1132,7 +1132,11 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
   .result-track { width: 44%; max-width: 320px; bottom: 24px; }
 }
 @media (max-width: 600px) {
-  .canvas-card { aspect-ratio: 1; max-width: none; }
+  .canvas-card {
+    aspect-ratio: 1;
+    max-width: none;
+    width: 100%;
+  }
   .result-track { width: 48%; max-width: none; bottom: 20px; }
   .track-labels { font-size: 10px; }
   .dice-idle { padding: 0 26%; }
