@@ -110,6 +110,48 @@ img, svg { display: block; }
 .text-danger { color: var(--color-danger-bright); }
 
 /* ============================================================
+   Marquee (Live Ticker)
+   ============================================================ */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee 60s linear infinite;
+  will-change: transform;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* ============================================================
+   Status dots (lobby tiles, ticker)
+   ============================================================ */
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex: none;
+}
+.status-dot-gold {
+  background: var(--color-primary);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.7);
+}
+.status-dot-silver {
+  background: var(--color-warning);
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.status-dot-pulse {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+/* ============================================================
    Reduced motion
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
@@ -118,4 +160,6 @@ img, svg { display: block; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+  .animate-marquee { animation: none !important; }
+  .status-dot-pulse { animation: none !important; }
 }
