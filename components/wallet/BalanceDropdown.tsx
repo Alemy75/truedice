@@ -38,7 +38,12 @@ export function BalanceDropdown() {
           }}
           className="inline-flex items-center gap-2 h-10 px-3.5 rounded-md bg-surface-overlay border border-border hover:border-primary/40 transition-colors"
         >
-          <span className="text-foreground-muted text-sm">Balance ·</span>
+          <span
+            className="text-foreground-subtle text-xs uppercase tracking-[0.1em] font-medium"
+            title="Funds you've deposited into the casino contract. Separate from your wallet's on-chain ETH."
+          >
+            In Casino
+          </span>
           <span className="font-mono text-foreground text-sm tabular-nums">
             {balance !== undefined ? formatEth(balance as bigint) : "—"} ETH
           </span>
