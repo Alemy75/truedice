@@ -233,6 +233,11 @@ img, svg { display: block; }
 .dtable tbody tr { transition: background 150ms ease-out; }
 .dtable tbody tr:hover { background: var(--color-surface-elevated); }
 .dtable tbody tr:last-child td { border-bottom: 0; }
+/* Time + Roll columns: their content (relative time like "54m ago" and
+   the result digits + ✓/✗ marker) must stay on a single line — wrapping
+   makes the table look broken on narrow viewports. */
+.dtable .col-time,
+.dtable .col-roll { white-space: nowrap; }
 
 /* ============================================================
    Lobby — nav, hero, stats, tiles, footer (from index.html inline)
@@ -772,7 +777,7 @@ img, svg { display: block; }
 /* ---- Dice canvas ---- */
 .canvas-card {
   position: relative; aspect-ratio: 1; background: var(--color-surface);
-  border-radius: var(--radius-xl); box-shadow: var(--shadow-gold-rim);
+  border-radius: var(--radius-xl);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 32px; overflow: hidden;
   transition: box-shadow 800ms ease-out;
@@ -1127,7 +1132,7 @@ input[type=range].slider::-moz-range-progress { height: 6px; border-radius: 999p
   .result-track { width: 44%; max-width: 320px; bottom: 24px; }
 }
 @media (max-width: 600px) {
-  .canvas-card { aspect-ratio: 4/3; max-width: none; }
+  .canvas-card { aspect-ratio: 1; max-width: none; }
   .result-track { width: 48%; max-width: none; bottom: 20px; }
   .track-labels { font-size: 10px; }
   .dice-idle { padding: 0 26%; }

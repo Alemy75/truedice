@@ -550,10 +550,10 @@ function BetsTable({
       <table className="dtable">
         <thead>
           <tr>
-            <th>Time</th>
+            <th className="col-time">Time</th>
             {showPlayer && <th>Player</th>}
             <th className="num">Chance</th>
-            <th className="num">Roll</th>
+            <th className="num col-roll">Roll</th>
             <th className="num">Stake</th>
             <th className="num">Payout</th>
             <th className="num">Verify</th>
@@ -562,14 +562,16 @@ function BetsTable({
         <tbody>
           {rows.map((r) => (
             <tr key={r.requestId.toString()}>
-              <td className="text-muted">{formatRelativeTime(r.timestamp)}</td>
+              <td className="text-muted col-time">
+                {formatRelativeTime(r.timestamp)}
+              </td>
               {showPlayer && (
                 <td>
                   <AddressChip address={r.player} showCopy={false} />
                 </td>
               )}
               <td className="num mono">{formatPercentBps(r.rollUnder)}</td>
-              <td className="num mono">
+              <td className="num mono col-roll">
                 {r.settled && r.result !== undefined ? (
                   <>
                     {String(r.result).padStart(4, "0")}{" "}
