@@ -442,7 +442,10 @@ img, svg { display: block; }
 }
 .nav-burger-menu-divider {
   height: 1px;
-  background: var(--color-border-subtle);
+  /* Was --color-border-subtle (#161310) which is invisible on the
+     elevated burger-menu surface; bump to --color-border for a visible
+     hairline that separates nav links from the wallet button. */
+  background: var(--color-border);
   margin: 6px 4px;
 }
 .nav-burger-menu-wallet {
@@ -455,10 +458,18 @@ img, svg { display: block; }
 .nav-burger-menu-wallet > button {
   width: 100%;
 }
-.nav-burger-menu-wallet .menu-trigger,
-.nav-burger-menu-wallet .btn {
+/* Connected: .menu-trigger has 3 children (label / balance / caret) so
+   space-between distributes them across the full pill width. */
+.nav-burger-menu-wallet .menu-trigger {
   width: 100%;
   justify-content: space-between;
+}
+/* Disconnected: .btn has a single "Connect Wallet" label — centre it
+   rather than space-between (which would push it to one edge of a wide
+   pill and look broken). */
+.nav-burger-menu-wallet .btn {
+  width: 100%;
+  justify-content: center;
 }
 
 /* Mobile breakpoint: inline links → burger, hide desktop wallet position,
