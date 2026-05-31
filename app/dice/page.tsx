@@ -8,6 +8,7 @@ import confetti from "canvas-confetti";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { AddressChip } from "@/components/ui/AddressChip";
+import { BetSpinner } from "@/components/dice/BetSpinner";
 import { useDicePhase } from "@/hooks/useDicePhase";
 import { useCasinoBalance } from "@/hooks/useBalance";
 import { useHouseBankroll } from "@/hooks/useHouseBankroll";
@@ -262,7 +263,7 @@ export default function DicePage() {
             className={`canvas-card ${canvasToneClass}`}
           >
             <div className="canvas-vignette" />
-            <div className="dice-frame" />
+            <BetSpinner phase={phase} />
 
             {isIdle && (
               <div className="dice-idle">
