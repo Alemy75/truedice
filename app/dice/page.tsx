@@ -587,9 +587,11 @@ function BetsTable({
                   r.settled && r.won ? "text-gold" : "text-subtle"
                 }`}
               >
-                {r.settled && r.won && r.payout
-                  ? `+${formatEthSmart(r.payout - r.stake)}`
-                  : "—"}
+                {!r.settled
+                  ? "—"
+                  : r.won
+                    ? `+${formatEthSmart(r.payout! - r.stake)}`
+                    : `−${formatEthSmart(r.stake)}`}
               </td>
               <td className="num">
                 <Link
