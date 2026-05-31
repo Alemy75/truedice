@@ -110,7 +110,7 @@ export function WithdrawModal({
           className="mono"
           style={{ color: "var(--color-foreground)" }}
         >
-          {balance !== undefined ? formatEth(balance as bigint) : "—"} ETH
+          {balance !== undefined ? formatEth(balance as bigint, 6) : "—"} ETH
         </span>
       </p>
 

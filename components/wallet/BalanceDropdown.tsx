@@ -51,7 +51,7 @@ export function BalanceDropdown() {
         >
           <span className="menu-trigger-label">In Casino</span>
           <span className="mono">
-            {balance !== undefined ? formatEthSmart(balance as bigint) : "—"}{" "}
+            {balance !== undefined ? formatEthSmart(balance as bigint, 6) : "—"}{" "}
             <span className="menu-trigger-suffix">ETH</span>
           </span>
           <ChevronDown

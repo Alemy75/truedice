@@ -387,7 +387,7 @@ export default function DicePage() {
                     className="mono"
                     style={{ color: "var(--color-foreground-muted)" }}
                   >
-                    {balance !== undefined ? formatEthSmart(balance as bigint) : "—"} ETH
+                    {balance !== undefined ? formatEthSmart(balance as bigint, 6) : "—"} ETH
                   </span>
                 </span>
               </div>
