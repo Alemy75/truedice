@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "./Modal";
 import { useCasinoContract } from "@/hooks/useCasinoContract";
 import { useToast } from "@/components/toast/ToastProvider";
@@ -19,6 +20,7 @@ export function DepositModal({
 }) {
   const contract = useCasinoContract();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState("0.0100");
   const [error, setError] = useState<string | null>(null);
   const { writeContractAsync, isPending } = useWriteContract();
@@ -37,9 +39,19 @@ export function DepositModal({
     }
   }, [open]);
 
-  // On successful confirmation: close modal + show success toast.
+  // On successful confirmation: refetch player balance, close modal,
+  // show toast. The balance hook also subscribes to Deposited events via
+  // WSS, but explicit invalidation here protects against WSS race
+  // conditions (event delivered before subscription was active, dropped
+  // connection, etc.).
   useEffect(() => {
     if (isSuccess && txHash) {
+      // Invalidate all read-contract queries — refetches balance, bankroll,
+      // and recent rolls. Cheap on Sepolia, eliminates "stale balance after
+      // deposit" UX bug.
+      queryClient.invalidateQueries({
+        predicate: (q) => q.queryKey[0] === "readContract",
+      });
       showToast({
         message: `Deposited ${submittedAmount} ETH`,
         description: "Funds are now available in your casino balance.",

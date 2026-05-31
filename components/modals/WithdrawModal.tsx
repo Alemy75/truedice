@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal } from "./Modal";
 import { useCasinoContract } from "@/hooks/useCasinoContract";
 import { useCasinoBalance } from "@/hooks/useBalance";
@@ -22,6 +23,7 @@ export function WithdrawModal({
   const contract = useCasinoContract();
   const { data: balance } = useCasinoBalance();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState("0.0100");
   const [error, setError] = useState<string | null>(null);
   const { writeContractAsync, isPending } = useWriteContract();
@@ -40,9 +42,15 @@ export function WithdrawModal({
     }
   }, [open]);
 
-  // On successful confirmation: close modal + show success toast.
+  // On successful confirmation: refetch balance + bankroll + recent
+  // rolls, close modal, show toast. Explicit invalidation here is a
+  // safety net on top of the WSS event watcher in useCasinoBalance —
+  // WSS subscriptions can miss events under network lag.
   useEffect(() => {
     if (isSuccess && txHash) {
+      queryClient.invalidateQueries({
+        predicate: (q) => q.queryKey[0] === "readContract",
+      });
       showToast({
         message: `Withdrew ${submittedAmount} ETH`,
         description: "Funds are now in your connected wallet.",
