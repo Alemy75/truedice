@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useMemo } from "react";
 import Link from "next/link";
-import { usePublicClient } from "wagmi";
+import { useReadContract } from "wagmi";
 import { Nav } from "@/components/layout/Nav";
 import { ProofStep, KV } from "@/components/proof/ProofStep";
 import { EtherscanLink } from "@/components/ui/EtherscanLink";
@@ -16,11 +16,6 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
-const DEPLOY_BLOCK_FALLBACK = 10960000n;
-const DEPLOY_BLOCK = process.env.NEXT_PUBLIC_DEPLOY_BLOCK
-  ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK)
-  : DEPLOY_BLOCK_FALLBACK;
-
 interface ProofData {
   player: `0x${string}`;
   stake: bigint;
@@ -29,11 +24,9 @@ interface ProofData {
   result?: number;
   won?: boolean;
   payout?: bigint;
-  placedTx: `0x${string}`;
-  placedBlock: bigint;
-  settledTx?: `0x${string}`;
-  settledBlock?: bigint;
 }
+
+const ZERO = "0x0000000000000000000000000000000000000000";
 
 export default function ProofPage({
   params,
@@ -41,67 +34,59 @@ export default function ProofPage({
   params: Promise<{ requestId: string }>;
 }) {
   const { requestId } = use(params);
-  const publicClient = usePublicClient();
   const contract = useCasinoContract();
-  const [data, setData] = useState<ProofData | null>(null);
-  const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
-    if (!publicClient || !requestId) return;
-    let cancelled = false;
-    let reqId: bigint;
-    try {
-      reqId = BigInt(requestId);
-    } catch {
-      setNotFound(true);
-      return;
-    }
-    (async () => {
-      try {
-        const placed = await publicClient.getContractEvents({
-          ...contract,
-          eventName: "BetPlaced",
-          args: { requestId: reqId },
-          fromBlock: DEPLOY_BLOCK,
-          toBlock: "latest",
-        });
-        if (cancelled) return;
-        if (placed.length === 0) {
-          setNotFound(true);
-          return;
-        }
-        const p = placed[0];
-        const settled = await publicClient.getContractEvents({
-          ...contract,
-          eventName: "BetSettled",
-          args: { requestId: reqId },
-          fromBlock: DEPLOY_BLOCK,
-          toBlock: "latest",
-        });
-        if (cancelled) return;
-        const s = settled[0];
-        setData({
-          player: p.args.player as `0x${string}`,
-          stake: p.args.stake as bigint,
-          rollUnder: Number(p.args.rollUnder as bigint),
-          multiplierBps: Number(p.args.multiplierBps as bigint),
-          result: s ? Number(s.args.result as bigint) : undefined,
-          won: s ? (s.args.won as boolean) : undefined,
-          payout: s ? (s.args.payout as bigint) : undefined,
-          placedTx: p.transactionHash,
-          placedBlock: p.blockNumber!,
-          settledTx: s?.transactionHash,
-          settledBlock: s?.blockNumber,
-        });
-      } catch (err) {
-        console.error("Proof page load failed", err);
-        if (!cancelled) setNotFound(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
+  // Validate the URL param as a bigint up-front
+  let reqId: bigint | null = null;
+  let parseError = false;
+  try {
+    reqId = BigInt(requestId);
+  } catch {
+    parseError = true;
+  }
+
+  // Read the Roll struct directly from the rolls(requestId) mapping.
+  // This is a single eth_call — no eth_getLogs, no block-range limits.
+  const {
+    data: rollRaw,
+    isLoading,
+    isError,
+  } = useReadContract({
+    ...contract,
+    functionName: "rolls",
+    args: reqId !== null ? [reqId] : undefined,
+    query: { enabled: reqId !== null },
+  });
+
+  const data = useMemo<ProofData | null>(() => {
+    if (!rollRaw) return null;
+    // Solidity public mapping returns a tuple of named fields in declaration order:
+    // (player, stake, rollUnder, multiplierBps, result, won, settled, requestedAt)
+    const tuple = rollRaw as unknown as readonly [
+      `0x${string}`, // player
+      bigint, // stake (uint128)
+      bigint, // rollUnder (uint64)
+      bigint, // multiplierBps (uint64)
+      bigint, // result (uint64)
+      boolean, // won
+      boolean, // settled
+      number, // requestedAt (uint40 — viem maps small uints to number)
+    ];
+    const [player, stake, rollUnder, multiplierBps, result, won, settled] = tuple;
+    if (player === ZERO) return null;
+    const multBps = Number(multiplierBps);
+    return {
+      player,
+      stake,
+      rollUnder: Number(rollUnder),
+      multiplierBps: multBps,
+      result: settled ? Number(result) : undefined,
+      won: settled ? won : undefined,
+      payout: settled && won ? (stake * BigInt(multBps)) / 10000n : undefined,
     };
-  }, [publicClient, contract, requestId]);
+  }, [rollRaw]);
+
+  const notFound = parseError || (!isLoading && (isError || data === null));
 
   return (
     <>
@@ -146,9 +131,9 @@ export default function ProofPage({
                 </div>
               </div>
               <EtherscanLink
-                type="tx"
-                value={data.placedTx}
-                label="Open on Etherscan"
+                type="address"
+                value={contract.address}
+                label="Contract on Etherscan"
                 className="ml-auto h-11 px-5 rounded-md border border-primary/40 text-primary hover:bg-primary/[0.06] transition-colors text-sm"
               />
             </div>
@@ -171,17 +156,11 @@ export default function ProofPage({
                   label="Multiplier"
                   value={formatMultiplierBps(data.multiplierBps)}
                 />
-                <div className="mt-2 pt-5 border-t border-border-subtle flex flex-wrap gap-6">
+                <div className="mt-2 pt-5 border-t border-border-subtle">
                   <EtherscanLink
-                    type="tx"
-                    value={data.placedTx}
-                    label={`Transaction · ${data.placedTx.slice(0, 6)}…${data.placedTx.slice(-3)}`}
-                    className="text-sm text-foreground-muted hover:text-primary"
-                  />
-                  <EtherscanLink
-                    type="block"
-                    value={data.placedBlock}
-                    label={`Block · ${data.placedBlock.toString()}`}
+                    type="address"
+                    value={contract.address}
+                    label="Read all events on contract Etherscan ↗"
                     className="text-sm text-foreground-muted hover:text-primary"
                   />
                 </div>
@@ -201,27 +180,23 @@ export default function ProofPage({
               </ProofStep>
 
               <ProofStep step={3} title="VRF Fulfillment">
-                {data.settledTx ? (
+                {data.result !== undefined ? (
                   <>
                     <p className="text-[15px] leading-[1.6] text-foreground-muted mb-2">
                       Chainlink VRF oracle returned cryptographically
-                      verifiable randomness.
+                      verifiable randomness. The contract computed{" "}
+                      <code className="font-mono text-[13px] bg-surface-elevated text-foreground px-1.5 py-0.5 rounded-sm">
+                        result = randomWord % 10000
+                      </code>
+                      .
                     </p>
                     <div className="bg-surface-elevated font-mono text-sm text-foreground p-4 rounded-md leading-[1.6]">
                       <span className="block eyebrow mb-2.5">
                         Result (random word mod 10000)
                       </span>
                       <span className="break-all">
-                        {String(data.result ?? 0).padStart(4, "0")}
+                        {String(data.result).padStart(4, "0")}
                       </span>
-                    </div>
-                    <div className="mt-3 pt-5 border-t border-border-subtle">
-                      <EtherscanLink
-                        type="tx"
-                        value={data.settledTx}
-                        label={`Fulfillment Tx · ${data.settledTx.slice(0, 6)}…${data.settledTx.slice(-3)}`}
-                        className="text-sm text-foreground-muted hover:text-primary"
-                      />
                     </div>
                   </>
                 ) : (
@@ -232,7 +207,7 @@ export default function ProofPage({
               </ProofStep>
 
               <ProofStep step={4} title="Settlement">
-                {data.settledTx && data.result !== undefined ? (
+                {data.result !== undefined ? (
                   <>
                     <p className="text-[15px] leading-[1.6] text-foreground-muted mb-2">
                       Contract deterministically calculated the result and

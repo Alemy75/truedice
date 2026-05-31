@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { useWatchContractEvent, usePublicClient } from "wagmi";
+"use client";
+
+import { useMemo } from "react";
+import { useReadContract, useReadContracts, useWatchContractEvent } from "wagmi";
 import { useCasinoContract } from "./useCasinoContract";
 
 export interface BetEvent {
@@ -12,140 +14,107 @@ export interface BetEvent {
   won?: boolean;
   payout?: bigint;
   settled: boolean;
-  txHash: `0x${string}`;
-  blockNumber: bigint;
   timestamp: number;
 }
 
 const MAX_FEED = 50;
 
-// Contract was deployed at Sepolia block ~10960462 (May 31, 2026).
-// Using "earliest" with Alchemy/Infura hits a 10000-block range limit
-// and silently fails — pin to a known-good lower bound instead.
-const DEPLOY_BLOCK_FALLBACK = 10960000n;
-const DEPLOY_BLOCK = process.env.NEXT_PUBLIC_DEPLOY_BLOCK
-  ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK)
-  : DEPLOY_BLOCK_FALLBACK;
+interface RawRoll {
+  player: `0x${string}`;
+  stake: bigint;
+  rollUnder: bigint;
+  multiplierBps: bigint;
+  result: bigint;
+  won: boolean;
+  settled: boolean;
+  requestedAt: bigint;
+}
 
+/**
+ * Reads recent settled bets directly from the contract via getRecentRolls(50)
+ * + recentRollIds() — avoids eth_getLogs entirely. Alchemy free tier limits
+ * eth_getLogs to 10 blocks; this approach uses eth_call which has no such
+ * limit (each call is O(1) storage reads).
+ *
+ * Live updates: when a BetPlaced / BetSettled event arrives, refetch.
+ * useWatchContractEvent polls only the latest block — stays well under
+ * the 10-block limit per poll.
+ */
 export function useBetEvents() {
   const contract = useCasinoContract();
-  const publicClient = usePublicClient();
-  const [events, setEvents] = useState<BetEvent[]>([]);
 
-  // initial load via getContractEvents
-  useEffect(() => {
-    if (!publicClient) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const placedLogs = await publicClient.getContractEvents({
-          ...contract,
-          eventName: "BetPlaced",
-          fromBlock: DEPLOY_BLOCK,
-          toBlock: "latest",
-        });
-        const settledLogs = await publicClient.getContractEvents({
-          ...contract,
-          eventName: "BetSettled",
-          fromBlock: DEPLOY_BLOCK,
-          toBlock: "latest",
-        });
-
-        const settledByReq = new Map<
-          bigint,
-          (typeof settledLogs)[number]
-        >();
-        for (const l of settledLogs) {
-          settledByReq.set(l.args.requestId as bigint, l);
-        }
-
-        const blockTimestamps = new Map<bigint, number>();
-        const uniqueBlocks = [
-          ...new Set(placedLogs.map((l) => l.blockNumber).filter(Boolean)),
-        ] as bigint[];
-        await Promise.all(
-          uniqueBlocks.map(async (bn) => {
-            const block = await publicClient.getBlock({ blockNumber: bn });
-            blockTimestamps.set(bn, Number(block.timestamp));
-          }),
-        );
-
-        const merged: BetEvent[] = placedLogs.map((l) => {
-          const requestId = l.args.requestId as bigint;
-          const settled = settledByReq.get(requestId);
-          return {
-            requestId,
-            player: l.args.player as `0x${string}`,
-            stake: l.args.stake as bigint,
-            rollUnder: Number(l.args.rollUnder as bigint),
-            multiplierBps: Number(l.args.multiplierBps as bigint),
-            result: settled ? Number(settled.args.result as bigint) : undefined,
-            won: settled ? (settled.args.won as boolean) : undefined,
-            payout: settled ? (settled.args.payout as bigint) : undefined,
-            settled: !!settled,
-            txHash: l.transactionHash,
-            blockNumber: l.blockNumber!,
-            timestamp:
-              blockTimestamps.get(l.blockNumber!) ?? Date.now() / 1000,
-          };
-        });
-        merged.sort((a, b) => Number(b.blockNumber - a.blockNumber));
-        if (!cancelled) setEvents(merged.slice(0, MAX_FEED));
-      } catch (e) {
-        console.error("useBetEvents initial load failed", e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [publicClient, contract]);
-
-  // live subscribe to new events
-  useWatchContractEvent({
+  const { data: rollsData, refetch: refetchRolls } = useReadContract({
     ...contract,
-    eventName: "BetSettled",
-    onLogs(logs) {
-      setEvents((prev) => {
-        const next = [...prev];
-        for (const l of logs) {
-          const requestId = l.args.requestId as bigint;
-          const idx = next.findIndex((e) => e.requestId === requestId);
-          if (idx >= 0) {
-            next[idx] = {
-              ...next[idx],
-              result: Number(l.args.result as bigint),
-              won: l.args.won as boolean,
-              payout: l.args.payout as bigint,
-              settled: true,
-            };
-          }
-        }
-        return next;
-      });
-    },
+    functionName: "getRecentRolls",
+    args: [BigInt(MAX_FEED)],
   });
 
+  // Read recentRollIds[0..MAX_FEED-1] in a single multicall.
+  // allowFailure: positions beyond actual length revert — we just skip them.
+  const { data: idsData, refetch: refetchIds } = useReadContracts({
+    contracts: Array.from({ length: MAX_FEED }, (_, i) => ({
+      address: contract.address,
+      abi: contract.abi,
+      functionName: "recentRollIds",
+      args: [BigInt(i)] as const,
+    })),
+    allowFailure: true,
+  });
+
+  const events = useMemo<BetEvent[]>(() => {
+    if (!rollsData || !Array.isArray(rollsData)) return [];
+    const rolls = rollsData as RawRoll[];
+    const ids = (idsData ?? [])
+      .filter((r) => r.status === "success")
+      .map((r) => r.result as bigint);
+
+    // rolls.length and ids.length should match (both = K = recentRollIds.length).
+    // Pair them by index. If they mismatch (shouldn't happen), fall back to
+    // truncating to the shorter list.
+    const n = Math.min(rolls.length, ids.length);
+    const out: BetEvent[] = [];
+    for (let i = 0; i < n; i++) {
+      const roll = rolls[i];
+      const requestId = ids[i];
+      const stake = roll.stake;
+      const multiplierBps = Number(roll.multiplierBps);
+      const payout =
+        roll.won && roll.settled
+          ? (stake * BigInt(multiplierBps)) / 10000n
+          : undefined;
+      out.push({
+        requestId,
+        player: roll.player,
+        stake,
+        rollUnder: Number(roll.rollUnder),
+        multiplierBps,
+        result: roll.settled ? Number(roll.result) : undefined,
+        won: roll.settled ? roll.won : undefined,
+        payout,
+        settled: roll.settled,
+        timestamp: Number(roll.requestedAt),
+      });
+    }
+    // Newest first
+    out.sort((a, b) => b.timestamp - a.timestamp);
+    return out;
+  }, [rollsData, idsData]);
+
+  // Live: refetch on any new BetPlaced/BetSettled.
   useWatchContractEvent({
     ...contract,
     eventName: "BetPlaced",
-    onLogs(logs) {
-      setEvents((prev) => {
-        const additions: BetEvent[] = logs.map((l) => ({
-          requestId: l.args.requestId as bigint,
-          player: l.args.player as `0x${string}`,
-          stake: l.args.stake as bigint,
-          rollUnder: Number(l.args.rollUnder as bigint),
-          multiplierBps: Number(l.args.multiplierBps as bigint),
-          settled: false,
-          txHash: l.transactionHash,
-          blockNumber: l.blockNumber!,
-          timestamp: Date.now() / 1000,
-        }));
-        // dedupe by requestId in case initial load already has them
-        const seen = new Set(prev.map((e) => e.requestId));
-        const newOnes = additions.filter((a) => !seen.has(a.requestId));
-        return [...newOnes, ...prev].slice(0, MAX_FEED);
-      });
+    onLogs() {
+      void refetchRolls();
+      void refetchIds();
+    },
+  });
+  useWatchContractEvent({
+    ...contract,
+    eventName: "BetSettled",
+    onLogs() {
+      void refetchRolls();
+      void refetchIds();
     },
   });
 
