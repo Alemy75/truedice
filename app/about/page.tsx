@@ -39,15 +39,18 @@ export default function AboutPage() {
           <h3>The Math</h3>
           <p>
             Payout is deterministic. The multiplier is derived from your win
-            chance with a flat <span className="m">1.00%</span> house edge:
+            chance with a flat <span className="m">1.00%</span> house edge —
+            baked into the contract as an immutable constant{" "}
+            <code>HOUSE_EDGE_BPS = 100</code>:
           </p>
           <div className="formula">
             {"multiplier = "}
             <span className="g">99</span>
             {` / winChance
 payout     = stake × multiplier
-houseEdge  = `}
-            <span className="g">1.00%</span>
+RTP        = winChance × multiplier
+           ≤ `}
+            <span className="g">99.00%</span>
           </div>
           <p>
             At 49.50% win chance, the multiplier is{" "}
@@ -55,6 +58,24 @@ houseEdge  = `}
             <span className="m">0.0010 ETH</span> stake returns{" "}
             <span className="m">0.0020 ETH</span> on a win — a net profit of{" "}
             <span className="m">0.0010 ETH</span>.
+          </p>
+          <p>
+            <strong style={{ color: "var(--color-foreground)" }}>
+              Why &ldquo;≤ 99%&rdquo; and not &ldquo;= 99%&rdquo;:
+            </strong>{" "}
+            Solidity rounds integer division <em>down</em>. For most win
+            chances the multiplier is exact (49.50% → 2.0000×), but for
+            others the floor takes a fraction of a percent off the
+            multiplier — which can only{" "}
+            <em>reduce</em> the player&rsquo;s expected return, never
+            increase it. The casino edge is{" "}
+            <span className="m">≥ 1.00%</span> at all times.
+          </p>
+          <p>
+            Empirically verified by{" "}
+            <code>testFuzz_HouseEdgeConverges</code> (256 fuzz iterations
+            × 200 bets) — bankroll PnL converges to{" "}
+            <span className="m">total_wagered × 0.01</span> within 4σ.
           </p>
         </section>
 
